@@ -1,18 +1,17 @@
 """Pytest configuration and shared fixtures."""
 
-import os
 import shutil
-# Add src to path for imports
 import sys
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, Generator
-from unittest.mock import MagicMock, Mock
+from unittest.mock import Mock
 
 import pytest
 import yaml
 from loguru import logger
 
+# Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from src.config import Config
@@ -269,7 +268,10 @@ def setup_test_logging():
     logger.add(
         "tests/test.log",
         level="DEBUG",
-        format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
+        format=(
+            "{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | "
+            "{name}:{function}:{line} - {message}"
+        ),
         rotation="1 MB",
         retention="1 day",
     )

@@ -228,7 +228,8 @@ class MarkdownToPDFConverter:
 
     def _parse_html_to_reportlab(self, html_content: str) -> List:
         """Parse HTML content and convert to ReportLab elements."""
-        # This is a simplified parser - in production, you might want to use BeautifulSoup
+        # This is a simplified parser - in production, you might want to use
+        # BeautifulSoup
         elements = []
 
         # Split content by HTML tags and process
@@ -310,7 +311,6 @@ class PDFToMarkdownConverter:
         try:
             import pdf2image
             import pytesseract
-            from PIL import Image
 
             # Convert PDF to images
             images = pdf2image.convert_from_path(pdf_path)
@@ -344,7 +344,8 @@ class PDFToMarkdownConverter:
 
         except ImportError:
             logger.error(
-                "Required OCR dependencies not installed. Install with: pip install pytesseract pdf2image"
+                "Required OCR dependencies not installed. Install with: "
+                "pip install pytesseract pdf2image"
             )
             raise
         except Exception as e:
