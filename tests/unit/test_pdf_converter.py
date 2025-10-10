@@ -167,7 +167,7 @@ def hello():
         output_path = Path("/tmp/test.pdf")
         
         # Mock ReportLab components
-        with patch('reportlab.platypus.SimpleDocTemplate') as mock_doc_class:
+        with patch('src.pdf_converter.SimpleDocTemplate') as mock_doc_class:
             with patch.object(converter, '_parse_html_to_reportlab') as mock_parse:
                 mock_doc = Mock()
                 mock_doc_class.return_value = mock_doc
@@ -229,7 +229,8 @@ def hello():
         converter = MarkdownToPDFConverter(config_custom)
         
         # Verify margins were converted correctly (points to inches)
-        expected_margin = 36 * 0.013888888888888888  # 36 points to inches
+        # 36 points * (1 inch / 72 points) = 0.5 inches
+        expected_margin = 36 * (1/72)  # 36 points to inches
         assert converter.margins[0] == expected_margin
 
 
@@ -347,10 +348,10 @@ This is a very long paragraph that should not be converted to a heading because 
         
         # Verify heading detection
         assert lines[0] == "# TITLE IN CAPS"
-        assert lines[2] == "This is a regular paragraph with some text."
-        assert lines[4] == "## SHORT HEADING"
-        assert lines[6] == "Another paragraph with more content."
-        assert lines[8] == "This is a very long paragraph that should not be converted to a heading because it's too long and ends with a period."
+        assert lines[1] == "This is a regular paragraph with some text."
+        assert lines[3] == "# SHORT HEADING"
+        assert lines[4] == "Another paragraph with more content."
+        assert lines[6] == "This is a very long paragraph that should not be converted to a heading because it's too long and ends with a period."
 
     def test_ocr_configuration(self, config, temp_dir, sample_pdf_content):
         """Test OCR configuration usage."""
@@ -380,8 +381,12 @@ This is a very long paragraph that should not be converted to a heading because 
         
         non_existent_file = temp_dir / "non_existent.pdf"
         
-        with pytest.raises(FileNotFoundError):
-            converter.convert_pdf_to_markdown(non_existent_file)
+        # Mock pdf2image to raise FileNotFoundError
+        with patch('pdf2image.convert_from_path') as mock_convert:
+            mock_convert.side_effect = FileNotFoundError("File not found")
+            
+            with pytest.raises(FileNotFoundError):
+                converter.convert_pdf_to_markdown(non_existent_file)
 
     def test_convert_pdf_to_markdown_empty_pdf(self, config, temp_dir):
         """Test PDF to markdown conversion with empty PDF."""

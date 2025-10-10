@@ -32,7 +32,7 @@ class MarkdownToPDFConverter:
         
         # Set up margins
         margins = self.pdf_config.get('margins', [72, 72, 72, 72])  # Default 1 inch margins
-        self.margins = [margin * inch / 72 for margin in margins]  # Convert points to inches
+        self.margins = [margin / 72 for margin in margins]  # Convert points to inches
         
         # Set up styles
         self.styles = self._setup_styles()
@@ -341,7 +341,9 @@ class PDFToMarkdownConverter:
         processed_lines = []
         
         for line in lines:
+            original_line = line
             line = line.strip()
+            
             if not line:
                 processed_lines.append('')
                 continue
