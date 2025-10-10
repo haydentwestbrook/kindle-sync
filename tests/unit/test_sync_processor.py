@@ -197,7 +197,7 @@ class TestSyncProcessor:
         md_file.write_text(sample_markdown_content)
         
         # Mock auto-convert and auto-send enabled
-        with patch.object(processor.config, 'get', side_effect=lambda key: True):
+        with patch.object(processor.config, 'get', side_effect=lambda key, default=None: True):
             with patch.object(processor.kindle_sync, 'backup_file'):
                 with patch.object(processor.markdown_to_pdf, 'convert_markdown_to_pdf') as mock_convert:
                     with patch.object(processor.kindle_sync, 'send_pdf_to_kindle') as mock_send:
@@ -219,7 +219,7 @@ class TestSyncProcessor:
         md_file.write_text(sample_markdown_content)
         
         # Mock auto-convert enabled but auto-send disabled
-        def mock_get(key):
+        def mock_get(key, default=None):
             if key == 'sync.auto_convert_on_save':
                 return True
             elif key == 'sync.auto_send_to_kindle':

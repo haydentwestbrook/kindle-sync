@@ -15,7 +15,11 @@ class TestConfig:
         """Test Config initialization with valid file."""
         config = Config(str(config_file))
         assert config.config_path == config_file
-        assert config._config == sample_config
+        
+        # The Config class expands relative paths, so we need to check the expanded version
+        expected_config = sample_config.copy()
+        expected_config['sync']['backup_folder'] = str(Path.cwd() / 'Backups')
+        assert config._config == expected_config
 
     def test_config_file_not_found(self, temp_dir: Path):
         """Test Config initialization with non-existent file."""
@@ -64,7 +68,7 @@ class TestConfig:
     def test_get_backup_folder_path(self, config: Config):
         """Test get_backup_folder_path method."""
         backup_path = config.get_backup_folder_path()
-        assert backup_path == Path('Backups')
+        assert backup_path == Path.cwd() / 'Backups'
 
     def test_get_kindle_email(self, config: Config):
         """Test get_kindle_email method."""
@@ -124,7 +128,7 @@ class TestConfig:
             'auto_convert_on_save': True,
             'auto_send_to_kindle': True,
             'backup_originals': True,
-            'backup_folder': 'Backups'
+            'backup_folder': str(Path.cwd() / 'Backups')
         }
         assert sync_config == expected
 
