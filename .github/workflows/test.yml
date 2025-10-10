@@ -44,14 +44,14 @@ jobs:
         python -m pytest tests/unit/ -v --cov=src --cov-report=xml --cov-report=term-missing --junitxml=test-results-unit.xml
         
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v4
       with:
         file: ./coverage.xml
         flags: unit
         name: unit-tests
         
     - name: Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: unit-test-results
@@ -90,7 +90,7 @@ jobs:
         python -m pytest tests/integration/ -v --junitxml=test-results-integration.xml
         
     - name: Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: integration-test-results
@@ -128,7 +128,7 @@ jobs:
         python -m pytest tests/e2e/ -v --junitxml=test-results-e2e.xml -m "not slow"
         
     - name: Upload test results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: e2e-test-results
@@ -162,7 +162,7 @@ jobs:
         safety check --json --output safety-report.json || true
         
     - name: Upload security reports
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: security-reports
@@ -260,7 +260,7 @@ jobs:
         python -m pytest tests/ -m "slow" --benchmark-only --benchmark-save=performance --benchmark-save-data
         
     - name: Upload performance results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: performance-results
@@ -274,7 +274,7 @@ jobs:
     
     steps:
     - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       
     - name: Generate test summary
       run: |
@@ -315,7 +315,7 @@ jobs:
         echo "✅ Docker tests completed" >> test-summary.md
         
     - name: Upload test summary
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: test-summary
         path: test-summary.md
