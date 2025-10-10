@@ -134,6 +134,7 @@ kindle_sync.log
 *.log
 logs/
 backups/
+Backups/
 temp/
 tmp/
 
