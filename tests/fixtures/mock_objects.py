@@ -7,7 +7,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-from unittest.mock import MagicMock, Mock
+from unittest.mock import Mock
 
 from .sample_data import SampleData
 
@@ -101,7 +101,10 @@ class MockFactory:
         msg["Subject"] = subject
 
         # Add body
-        body = f"Please find attached: {attachment_path.name if attachment_path else 'document.pdf'}"
+        body = (
+            f"Please find attached: "
+            f"{attachment_path.name if attachment_path else 'document.pdf'}"
+        )
         msg.attach(MIMEText(body, "plain"))
 
         # Add attachment if provided
