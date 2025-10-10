@@ -131,8 +131,14 @@ class TestObsidianFileHandler:
         # Mock the debounce time to be very small
         handler.debounce_time = 0.01
         
-        # Process the file
-        handler._process_file(test_file)
+        # Mock the file's modification time to be old enough to pass debounce check
+        with patch('pathlib.Path.stat') as mock_stat:
+            stat_result = Mock()
+            stat_result.st_mtime = time.time() - 1.0  # 1 second ago
+            mock_stat.return_value = stat_result
+            
+            # Process the file
+            handler._process_file(test_file)
         
         # Verify callback was called
         callback.assert_called_once_with(test_file)
@@ -254,19 +260,18 @@ class TestObsidianFileWatcher:
         callback = Mock()
         watcher = ObsidianFileWatcher(config, callback)
         
-        # Mock the observer
-        with patch('watchdog.observers.Observer') as mock_observer_class:
-            mock_observer = Mock()
-            mock_observer_class.return_value = mock_observer
+        # Mock the observer instance
+        mock_observer = Mock()
+        watcher.observer = mock_observer
+        
+        # Mock the config to return the test vault
+        with patch.object(config, 'get_obsidian_vault_path', return_value=obsidian_vault):
+            watcher.start()
             
-            # Mock the config to return the test vault
-            with patch.object(config, 'get_obsidian_vault_path', return_value=obsidian_vault):
-                watcher.start()
-                
-                # Verify observer was configured and started
-                mock_observer.schedule.assert_called_once()
-                mock_observer.start.assert_called_once()
-                assert watcher.is_running is True
+            # Verify observer was configured and started
+            mock_observer.schedule.assert_called_once()
+            mock_observer.start.assert_called_once()
+            assert watcher.is_running is True
 
     def test_start_watcher_vault_not_exists(self, config):
         """Test watcher start with non-existent vault."""
@@ -339,27 +344,26 @@ class TestObsidianFileWatcher:
         callback = Mock()
         watcher = ObsidianFileWatcher(config, callback)
         
-        # Mock the observer
-        with patch('watchdog.observers.Observer') as mock_observer_class:
-            mock_observer = Mock()
-            mock_observer_class.return_value = mock_observer
+        # Mock the observer instance
+        mock_observer = Mock()
+        watcher.observer = mock_observer
+        
+        # Mock the config
+        with patch.object(config, 'get_obsidian_vault_path', return_value=obsidian_vault):
+            def mock_get(key, default=None):
+                if key == 'obsidian.watch_subfolders':
+                    return False
+                elif key == 'obsidian.sync_folder':
+                    return 'Kindle Sync'
+                return default
             
-            # Mock the config
-            with patch.object(config, 'get_obsidian_vault_path', return_value=obsidian_vault):
-                def mock_get(key, default=None):
-                    if key == 'obsidian.watch_subfolders':
-                        return False
-                    elif key == 'obsidian.sync_folder':
-                        return 'Kindle Sync'
-                    return default
+            with patch.object(config, 'get', side_effect=mock_get):
+                watcher.start()
                 
-                with patch.object(config, 'get', side_effect=mock_get):
-                    watcher.start()
-                    
-                    # Verify recursive=False was passed
-                    mock_observer.schedule.assert_called_once()
-                    call_args = mock_observer.schedule.call_args
-                    assert call_args[1]['recursive'] is False
+                # Verify recursive=False was passed
+                mock_observer.schedule.assert_called_once()
+                call_args = mock_observer.schedule.call_args
+                assert call_args[1]['recursive'] is False
 
     def test_folder_creation_on_start(self, config, temp_dir):
         """Test that required folders are created on start."""

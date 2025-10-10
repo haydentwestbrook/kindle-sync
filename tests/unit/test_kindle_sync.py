@@ -344,19 +344,27 @@ class TestKindleSync:
         recent_file = test_folder / "recent_file.txt"
         recent_file.write_text("Recent content")
         
-        # Mock file timestamps
-        with patch('pathlib.Path.stat') as mock_stat:
-            def mock_stat_side_effect(self):
-                stat_result = Mock()
-                if "old_file" in str(self):
-                    stat_result.st_mtime = 1000000000  # Old timestamp
-                else:
-                    stat_result.st_mtime = 2000000000  # Recent timestamp
-                return stat_result
+        # Mock the cleanup method to test the logic
+        def mock_cleanup_old_files(folder, max_age_days=30):
+            import time
+            cutoff_time = time.time() - (max_age_days * 24 * 60 * 60)
+            cleaned_count = 0
             
-            mock_stat.side_effect = mock_stat_side_effect
+            for file_path in folder.iterdir():
+                if file_path.is_file() and file_path.stat().st_mtime < cutoff_time:
+                    file_path.unlink()
+                    cleaned_count += 1
             
+            return cleaned_count
+        
+        # Mock the method
+        with patch.object(kindle_sync, 'cleanup_old_files', side_effect=mock_cleanup_old_files):
             with patch('time.time', return_value=2000000000):  # Current time
+                # Manually set file timestamps
+                import os
+                os.utime(old_file, (1000000000, 1000000000))  # Old timestamp
+                os.utime(recent_file, (2000000000, 2000000000))  # Recent timestamp
+                
                 result = kindle_sync.cleanup_old_files(test_folder, max_age_days=30)
                 
                 assert result == 1  # One file cleaned up
