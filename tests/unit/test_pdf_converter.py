@@ -1,8 +1,7 @@
 """Unit tests for PDF conversion functionality."""
 
-from io import BytesIO
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, mock_open, patch
+from unittest.mock import Mock, mock_open, patch
 
 import pytest
 

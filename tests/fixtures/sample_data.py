@@ -1,7 +1,7 @@
 """Sample data fixtures for testing."""
 
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 import yaml
 
@@ -33,10 +33,10 @@ def sync_document(markdown_file: Path) -> Path:
     \"\"\"Convert markdown to PDF and send to Kindle.\"\"\"
     pdf_converter = MarkdownToPDFConverter(config)
     pdf_path = pdf_converter.convert_markdown_to_pdf(markdown_file)
-    
+
     kindle_sync = KindleSync(config)
     kindle_sync.send_pdf_to_kindle(pdf_path)
-    
+
     return pdf_path
 ```
 
@@ -64,7 +64,7 @@ $$E = mc^2$$
 
 Where:
 - E = Energy
-- m = Mass  
+- m = Mass
 - c = Speed of light
 
 ### Special Characters
@@ -129,11 +129,11 @@ endobj
 
 xref
 0 5
-0000000000 65535 f 
-0000000009 00000 n 
-0000000058 00000 n 
-0000000115 00000 n 
-0000000204 00000 n 
+0000000000 65535 f
+0000000009 00000 n
+0000000058 00000 n
+0000000115 00000 n
+0000000204 00000 n
 trailer
 <<
 /Size 5
@@ -201,17 +201,27 @@ startxref
     # Sample OCR results
     SAMPLE_OCR_RESULTS = [
         {
-            "text": "TITLE IN CAPS\nThis is a regular paragraph with some text.\n\nSHORT HEADING\nAnother paragraph with more content.",
+            "text": (
+                "TITLE IN CAPS\nThis is a regular paragraph with some text.\n\n"
+                "SHORT HEADING\nAnother paragraph with more content."
+            ),
             "confidence": 85.5,
             "language": "eng",
         },
         {
-            "text": "Meeting Notes\n\nDate: 2024-01-15\nAttendees: John, Jane, Bob\n\nAgenda:\n1. Project status\n2. Budget review\n3. Next steps",
+            "text": (
+                "Meeting Notes\n\nDate: 2024-01-15\nAttendees: John, Jane, Bob\n\n"
+                "Agenda:\n1. Project status\n2. Budget review\n3. Next steps"
+            ),
             "confidence": 92.3,
             "language": "eng",
         },
         {
-            "text": "Handwritten Notes\n\n• Important point 1\n• Important point 2\n• Action item: Follow up\n\nQuestions:\n- What is the timeline?\n- Who is responsible?",
+            "text": (
+                "Handwritten Notes\n\n• Important point 1\n• Important point 2\n"
+                "• Action item: Follow up\n\nQuestions:\n- What is the timeline?\n"
+                "- Who is responsible?"
+            ),
             "confidence": 78.1,
             "language": "eng",
         },

@@ -6,12 +6,8 @@ import tempfile
 import time
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List
 from unittest.mock import Mock, patch
-
-import pytest
-
-from tests.fixtures.sample_data import SampleData
 
 
 class TestHelpers:

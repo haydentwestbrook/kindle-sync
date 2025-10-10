@@ -2,7 +2,7 @@
 
 from email.mime.multipart import MIMEMultipart
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, mock_open, patch
+from unittest.mock import Mock, patch
 
 import pytest
 

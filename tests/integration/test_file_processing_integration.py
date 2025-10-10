@@ -1,12 +1,9 @@
 """Integration tests for file processing workflows."""
 
 import time
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
-
-from src.config import Config
 from src.file_watcher import ObsidianFileWatcher
 from src.kindle_sync import KindleSync
 from src.pdf_converter import MarkdownToPDFConverter, PDFToMarkdownConverter

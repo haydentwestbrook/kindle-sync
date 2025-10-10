@@ -2,10 +2,9 @@
 
 import time
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
-from watchdog.events import FileCreatedEvent, FileModifiedEvent, FileMovedEvent
 
 from src.file_watcher import ObsidianFileHandler, ObsidianFileWatcher
 

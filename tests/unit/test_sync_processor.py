@@ -1,7 +1,6 @@
 """Unit tests for sync processor functionality."""
 
-from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import patch
 
 import pytest
 
