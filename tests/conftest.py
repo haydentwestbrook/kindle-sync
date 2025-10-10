@@ -1,17 +1,18 @@
 """Pytest configuration and shared fixtures."""
 
 import os
-import tempfile
 import shutil
+# Add src to path for imports
+import sys
+import tempfile
 from pathlib import Path
-from typing import Generator, Dict, Any
-from unittest.mock import Mock, MagicMock
+from typing import Any, Dict, Generator
+from unittest.mock import MagicMock, Mock
+
 import pytest
 import yaml
 from loguru import logger
 
-# Add src to path for imports
-import sys
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from src.config import Config
@@ -41,7 +42,7 @@ def sample_config() -> Dict[str, Any]:
             "vault_path": "/tmp/test_obsidian",
             "sync_folder": "Kindle Sync",
             "templates_folder": "Templates",
-            "watch_subfolders": True
+            "watch_subfolders": True,
         },
         "kindle": {
             "email": "test@kindle.com",
@@ -49,48 +50,45 @@ def sample_config() -> Dict[str, Any]:
             "smtp_server": "smtp.gmail.com",
             "smtp_port": 587,
             "smtp_username": "test@gmail.com",
-            "smtp_password": "test_password"
+            "smtp_password": "test_password",
         },
         "processing": {
-            "ocr": {
-                "language": "eng",
-                "confidence_threshold": 60
-            },
+            "ocr": {"language": "eng", "confidence_threshold": 60},
             "pdf": {
                 "page_size": "A4",
                 "margins": [72, 72, 72, 72],
                 "font_family": "Times-Roman",
                 "font_size": 12,
-                "line_spacing": 1.2
+                "line_spacing": 1.2,
             },
             "markdown": {
                 "extensions": ["tables", "fenced_code", "toc"],
-                "preserve_links": True
-            }
+                "preserve_links": True,
+            },
         },
         "sync": {
             "auto_convert_on_save": True,
             "auto_send_to_kindle": True,
             "backup_originals": True,
-            "backup_folder": "Backups"
+            "backup_folder": "Backups",
         },
         "patterns": {
             "markdown_files": "*.md",
             "pdf_files": "*.pdf",
-            "image_files": "*.{png,jpg,jpeg}"
+            "image_files": "*.{png,jpg,jpeg}",
         },
         "logging": {
             "level": "DEBUG",
             "file": "test.log",
             "max_size": "1MB",
-            "backup_count": 2
+            "backup_count": 2,
         },
         "advanced": {
             "debounce_time": 0.1,
             "max_file_size": "10MB",
             "concurrent_processing": False,
-            "retry_attempts": 1
-        }
+            "retry_attempts": 1,
+        },
     }
 
 
@@ -98,7 +96,7 @@ def sample_config() -> Dict[str, Any]:
 def config_file(temp_dir: Path, sample_config: Dict[str, Any]) -> Path:
     """Create a temporary config file for testing."""
     config_path = temp_dir / "test_config.yaml"
-    with open(config_path, 'w') as f:
+    with open(config_path, "w") as f:
         yaml.dump(sample_config, f)
     return config_path
 
@@ -114,19 +112,19 @@ def obsidian_vault(temp_dir: Path) -> Path:
     """Create a mock Obsidian vault structure."""
     vault_path = temp_dir / "obsidian_vault"
     vault_path.mkdir()
-    
+
     # Create sync folder
     sync_folder = vault_path / "Kindle Sync"
     sync_folder.mkdir()
-    
+
     # Create templates folder
     templates_folder = vault_path / "Templates"
     templates_folder.mkdir()
-    
+
     # Create backup folder
     backup_folder = temp_dir / "Backups"
     backup_folder.mkdir()
-    
+
     return vault_path
 
 
@@ -241,22 +239,23 @@ def mock_ocr_result():
     return {
         "text": "This is extracted text from OCR",
         "confidence": 85.5,
-        "language": "eng"
+        "language": "eng",
     }
 
 
 @pytest.fixture
 def mock_pdf_images():
     """Mock PDF to images conversion result."""
-    from PIL import Image
     import io
-    
+
+    from PIL import Image
+
     # Create a simple test image
-    img = Image.new('RGB', (100, 100), color='white')
+    img = Image.new("RGB", (100, 100), color="white")
     img_bytes = io.BytesIO()
-    img.save(img_bytes, format='PNG')
+    img.save(img_bytes, format="PNG")
     img_bytes.seek(0)
-    
+
     return [Image.open(img_bytes)]
 
 
@@ -265,14 +264,14 @@ def setup_test_logging():
     """Set up test logging configuration."""
     # Remove existing loggers
     logger.remove()
-    
+
     # Add test logger
     logger.add(
         "tests/test.log",
         level="DEBUG",
         format="{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | {name}:{function}:{line} - {message}",
         rotation="1 MB",
-        retention="1 day"
+        retention="1 day",
     )
 
 
@@ -289,22 +288,22 @@ def mock_kindle_device():
 def sample_file_tree(temp_dir: Path) -> Dict[str, Path]:
     """Create a sample file tree for testing."""
     files = {}
-    
+
     # Create markdown files
     md_file = temp_dir / "test_document.md"
     md_file.write_text("# Test Document\n\nThis is a test.")
     files["markdown"] = md_file
-    
+
     # Create PDF file
     pdf_file = temp_dir / "test_document.pdf"
     pdf_file.write_bytes(b"PDF content")
     files["pdf"] = pdf_file
-    
+
     # Create image file
     img_file = temp_dir / "test_image.png"
     img_file.write_bytes(b"PNG content")
     files["image"] = img_file
-    
+
     return files
 
 
@@ -313,10 +312,10 @@ def mock_weasyprint():
     """Mock WeasyPrint for testing PDF generation."""
     mock_html = Mock()
     mock_html.write_pdf.return_value = b"Mock PDF content"
-    
+
     mock_weasyprint = Mock()
     mock_weasyprint.HTML.return_value = mock_html
-    
+
     return mock_weasyprint
 
 
@@ -325,10 +324,10 @@ def mock_reportlab():
     """Mock ReportLab for testing PDF generation."""
     mock_doc = Mock()
     mock_doc.build = Mock()
-    
+
     mock_simple_doc = Mock()
     mock_simple_doc.return_value = mock_doc
-    
+
     return mock_simple_doc
 
 
@@ -359,7 +358,7 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(pytest.mark.integration)
         elif "e2e" in str(item.fspath):
             item.add_marker(pytest.mark.e2e)
-        
+
         # Add markers based on test name
         if "slow" in item.name:
             item.add_marker(pytest.mark.slow)
