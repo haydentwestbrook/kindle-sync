@@ -16,15 +16,11 @@ Pillow==10.1.0
 
 # Markdown processing
 markdown==3.5.1
-markdown-extensions==0.1.0
 pypandoc==1.11
 
-# Email functionality
-smtplib-ssl==1.0.0
+# Email functionality (smtplib is built-in)
 
-# File handling
-pathlib2==2.3.7
-shutil-which==1.1.0
+# File handling (pathlib and shutil are built-in)
 
 # Logging and utilities
 loguru==0.7.2
