@@ -79,9 +79,7 @@ class TestHelpers:
         """Assert that a file contains expected content."""
         TestHelpers.assert_file_exists(path, timeout)
         actual_content = path.read_text()
-        assert (
-            actual_content == expected_content
-        ), (
+        assert actual_content == expected_content, (
             f"File content mismatch:\nExpected: {expected_content}\n"
             f"Actual: {actual_content}"
         )
@@ -262,9 +260,7 @@ class TestAssertions:
         ), f"Email recipient mismatch: expected {expected_to}, got {email_msg['To']}"
 
         if expected_subject:
-            assert (
-                email_msg["Subject"] == expected_subject
-            ), (
+            assert email_msg["Subject"] == expected_subject, (
                 f"Email subject mismatch: expected {expected_subject}, "
                 f"got {email_msg['Subject']}"
             )

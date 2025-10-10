@@ -2,6 +2,7 @@
 
 import time
 from unittest.mock import Mock, patch
+
 from src.file_watcher import ObsidianFileWatcher
 from src.kindle_sync import KindleSync
 from src.pdf_converter import MarkdownToPDFConverter, PDFToMarkdownConverter
@@ -90,7 +91,7 @@ class TestFileProcessingIntegration:
 
             # Mock the config to return the test vault path
             with patch.object(
-                config, 'get_obsidian_vault_path', return_value=obsidian_vault
+                config, "get_obsidian_vault_path", return_value=obsidian_vault
             ):
                 # Start watcher
                 watcher.start()
