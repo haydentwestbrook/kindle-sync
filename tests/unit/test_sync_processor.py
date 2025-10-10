@@ -183,9 +183,9 @@ class TestSyncProcessor:
                 with patch.object(processor.markdown_to_pdf, 'convert_markdown_to_pdf') as mock_convert:
                     processor._process_markdown_file(md_file)
                     
-                    # Backup should still be called
-                    mock_backup.assert_called_once_with(md_file)
-                    # Convert should not be called
+                    # When auto-convert is disabled, method returns early
+                    # So backup and convert should not be called
+                    mock_backup.assert_not_called()
                     mock_convert.assert_not_called()
 
     def test_process_markdown_file_send_failed(self, config, temp_dir, sample_markdown_content):

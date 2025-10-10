@@ -220,10 +220,11 @@ class TestKindleSync:
         original_file = temp_dir / "test.pdf"
         original_file.write_bytes(sample_pdf_content)
         
-        with patch.object(kindle_sync.config, 'get_sync_config', return_value={'backup_originals': False}):
-            result = kindle_sync.backup_file(original_file)
-            
-            assert result is None
+        # Mock the sync_config to disable backups
+        kindle_sync.sync_config = {'backup_originals': False, 'backup_folder': 'Backups'}
+        result = kindle_sync.backup_file(original_file)
+        
+        assert result is None
 
     def test_backup_file_error(self, config, temp_dir, sample_pdf_content):
         """Test file backup with error."""

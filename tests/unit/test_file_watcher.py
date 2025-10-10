@@ -346,7 +346,14 @@ class TestObsidianFileWatcher:
             
             # Mock the config
             with patch.object(config, 'get_obsidian_vault_path', return_value=obsidian_vault):
-                with patch.object(config, 'get', return_value=False):  # watch_subfolders = False
+                def mock_get(key, default=None):
+                    if key == 'obsidian.watch_subfolders':
+                        return False
+                    elif key == 'obsidian.sync_folder':
+                        return 'Kindle Sync'
+                    return default
+                
+                with patch.object(config, 'get', side_effect=mock_get):
                     watcher.start()
                     
                     # Verify recursive=False was passed
