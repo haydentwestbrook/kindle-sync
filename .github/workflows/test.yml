@@ -226,8 +226,8 @@ jobs:
         
     - name: Test Docker Compose
       run: |
-        docker-compose config
-        docker-compose build
+        docker compose config
+        docker compose build
 
   performance-tests:
     name: Performance Tests
