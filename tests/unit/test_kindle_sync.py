@@ -169,7 +169,7 @@ class TestKindleSync:
             ) or str(default_kindle_path) == str(default_kindle_path)
 
             with patch("shutil.copy2") as mock_copy:
-                result = kindle_sync.copy_to_kindle_usb(pdf_file)
+                kindle_sync.copy_to_kindle_usb(pdf_file)
 
                 # Should attempt to copy (even if path doesn't exist in test)
                 mock_copy.assert_called()

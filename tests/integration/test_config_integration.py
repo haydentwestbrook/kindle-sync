@@ -152,7 +152,7 @@ class TestConfigIntegration:
         with patch("pathlib.Path.expanduser") as mock_expand:
             mock_expand.return_value = temp_dir / "home" / "user" / "test_vault"
 
-            config = Config(str(config_file))
+            Config(str(config_file))
 
             # Verify expanduser was called
             mock_expand.assert_called()

@@ -2,8 +2,6 @@
 
 import time
 from unittest.mock import Mock, patch
-
-import pytest
 from src.file_watcher import ObsidianFileWatcher
 from src.kindle_sync import KindleSync
 from src.pdf_converter import MarkdownToPDFConverter, PDFToMarkdownConverter
@@ -91,7 +89,9 @@ class TestFileProcessingIntegration:
             mock_observer_class.return_value = mock_observer
 
             # Mock the config to return the test vault path
-            with patch.object(config, 'get_obsidian_vault_path', return_value=obsidian_vault):
+            with patch.object(
+                config, 'get_obsidian_vault_path', return_value=obsidian_vault
+            ):
                 # Start watcher
                 watcher.start()
 
@@ -328,7 +328,6 @@ def hello_world():
     def test_concurrent_file_processing(self, config, temp_dir):
         """Test concurrent file processing."""
         import threading
-        import time
 
         # Create multiple test files
         test_files = []
@@ -398,9 +397,9 @@ def hello_world():
                 def mock_generate_pdf_reportlab(html_content, output_path):
                     output_path.write_bytes(b"Mock PDF content")
                     return output_path
-                
+
                 mock_reportlab.side_effect = mock_generate_pdf_reportlab
-                
+
                 pdf_path = pdf_converter.convert_markdown_to_pdf(md_file)
 
                 # Verify fallback was used

@@ -81,7 +81,7 @@ class TestMarkdownToPDFConverter:
         output_path = temp_dir / "custom_output.pdf"
 
         # Mock the PDF generation
-        with patch.object(converter, "_generate_pdf") as mock_generate:
+        with patch.object(converter, "_generate_pdf"):
             with patch.object(converter, "_process_markdown") as mock_process:
                 mock_process.return_value = (
                     "<html><body>Processed content</body></html>"
@@ -351,13 +351,14 @@ class TestPDFToMarkdownConverter:
         """Test _process_extracted_text method."""
         converter = PDFToMarkdownConverter(config)
 
-        extracted_text = """TITLE IN CAPS
-This is a regular paragraph with some text.
-
-SHORT HEADING
-Another paragraph with more content.
-
-This is a very long paragraph that should not be converted to a heading because it's too long and ends with a period."""
+        extracted_text = (
+            "TITLE IN CAPS\n"
+            "This is a regular paragraph with some text.\n\n"
+            "SHORT HEADING\n"
+            "Another paragraph with more content.\n\n"
+            "This is a very long paragraph that should not be converted to a "
+            "heading because it's too long and ends with a period."
+        )
 
         result = converter._process_extracted_text(extracted_text)
         lines = result.split("\n")
@@ -369,7 +370,8 @@ This is a very long paragraph that should not be converted to a heading because 
         assert lines[4] == "Another paragraph with more content."
         assert (
             lines[6]
-            == "This is a very long paragraph that should not be converted to a heading because it's too long and ends with a period."
+            == "This is a very long paragraph that should not be converted to a "
+            "heading because it's too long and ends with a period."
         )
 
     def test_ocr_configuration(self, config, temp_dir, sample_pdf_content):

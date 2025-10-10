@@ -81,7 +81,10 @@ class TestHelpers:
         actual_content = path.read_text()
         assert (
             actual_content == expected_content
-        ), f"File content mismatch:\nExpected: {expected_content}\nActual: {actual_content}"
+        ), (
+            f"File content mismatch:\nExpected: {expected_content}\n"
+            f"Actual: {actual_content}"
+        )
 
     @staticmethod
     def assert_file_size(path: Path, expected_size: int, tolerance: int = 0):
@@ -158,9 +161,15 @@ class TestDataGenerator:
         for i in range(sections):
             content += f"## Section {i + 1}\n\n"
             content += f"This is section {i + 1} of the test document. "
-            content += "It contains sample text to test the markdown processing functionality.\n\n"
+            content += (
+                "It contains sample text to test the markdown processing "
+                "functionality.\n\n"
+            )
 
-        content += "## Code Example\n\n```python\ndef test_function():\n    return 'Hello, World!'\n```\n\n"
+        content += (
+            "## Code Example\n\n```python\ndef test_function():\n"
+            "    return 'Hello, World!'\n```\n\n"
+        )
         content += "## List Items\n\n- Item 1\n- Item 2\n- Item 3\n\n"
         content += "**Bold text** and *italic text* and `inline code`.\n"
 
@@ -255,7 +264,10 @@ class TestAssertions:
         if expected_subject:
             assert (
                 email_msg["Subject"] == expected_subject
-            ), f"Email subject mismatch: expected {expected_subject}, got {email_msg['Subject']}"
+            ), (
+                f"Email subject mismatch: expected {expected_subject}, "
+                f"got {email_msg['Subject']}"
+            )
 
     @staticmethod
     def assert_backup_created(backup_path: Path, original_path: Path):

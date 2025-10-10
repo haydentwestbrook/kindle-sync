@@ -287,10 +287,16 @@ class MockDataGenerator:
 
         for i in range(paragraphs):
             content += f"This is paragraph {i + 1} of the test document. "
-            content += "It contains some sample text to test the markdown processing functionality. "
-            content += "The content includes various formatting options and special characters.\n\n"
+            content += (
+                "It contains some sample text to test the markdown processing "
+                "functionality. The content includes various formatting options "
+                "and special characters.\n\n"
+            )
 
-        content += "## Code Example\n\n```python\ndef test_function():\n    return 'Hello, World!'\n```\n\n"
+        content += (
+            "## Code Example\n\n```python\ndef test_function():\n"
+            "    return 'Hello, World!'\n```\n\n"
+        )
         content += "## List Items\n\n- Item 1\n- Item 2\n- Item 3\n\n"
         content += "**Bold text** and *italic text* and `inline code`.\n"
 

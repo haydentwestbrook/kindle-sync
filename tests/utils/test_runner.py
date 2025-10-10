@@ -361,7 +361,8 @@ def run_tests_from_command_line():
         # Multiple results from suite runner
         for test_type, test_result in result.items():
             print(
-                f"{test_type.upper()}: {'PASSED' if test_result.get('success') else 'FAILED'}"
+                f"{test_type.upper()}: "
+                f"{'PASSED' if test_result.get('success') else 'FAILED'}"
             )
 
     return result

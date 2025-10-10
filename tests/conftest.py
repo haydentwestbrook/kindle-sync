@@ -1,20 +1,21 @@
 """Pytest configuration and shared fixtures."""
 
-import shutil
 import sys
-import tempfile
 from pathlib import Path
-from typing import Any, Dict, Generator
-from unittest.mock import Mock
-
-import pytest
-import yaml
-from loguru import logger
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from src.config import Config
+import shutil  # noqa: E402
+import tempfile  # noqa: E402
+from typing import Any, Dict, Generator  # noqa: E402
+from unittest.mock import Mock  # noqa: E402
+
+import pytest  # noqa: E402
+import yaml  # noqa: E402
+from loguru import logger  # noqa: E402
+
+from src.config import Config  # noqa: E402
 
 
 @pytest.fixture(scope="session")
@@ -196,11 +197,11 @@ endobj
 
 xref
 0 5
-0000000000 65535 f 
-0000000009 00000 n 
-0000000058 00000 n 
-0000000115 00000 n 
-0000000204 00000 n 
+0000000000 65535 f
+0000000009 00000 n
+0000000058 00000 n
+0000000115 00000 n
+0000000204 00000 n
 trailer
 <<
 /Size 5

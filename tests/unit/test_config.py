@@ -17,7 +17,8 @@ class TestConfig:
         config = Config(str(config_file))
         assert config.config_path == config_file
 
-        # The Config class expands relative paths, so we need to check the expanded version
+        # The Config class expands relative paths, so we need to check the
+        # expanded version
         expected_config = sample_config.copy()
         expected_config["sync"]["backup_folder"] = str(Path.cwd() / "Backups")
         assert config._config == expected_config
@@ -175,7 +176,7 @@ class TestConfig:
 
         with patch("pathlib.Path.expanduser") as mock_expand:
             mock_expand.return_value = Path("/home/user/test_vault")
-            config = Config(str(config_file))
+            Config(str(config_file))
 
             # Verify expanduser was called
             mock_expand.assert_called()
