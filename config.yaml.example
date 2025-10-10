@@ -1,0 +1,71 @@
+# Kindle Scribe ↔ Obsidian Sync Configuration Example
+# Copy this file to config.yaml and edit with your settings
+
+# Obsidian Configuration
+obsidian:
+  vault_path: "~/Documents/Obsidian"  # Path to your Obsidian vault
+  sync_folder: "Kindle Sync"          # Folder within vault for sync files
+  templates_folder: "Templates"       # Folder for document templates
+  watch_subfolders: true              # Watch all subfolders for changes
+
+# Kindle Configuration
+kindle:
+  email: "your-kindle@kindle.com"     # Your Kindle's Send to Kindle email
+  approved_senders:                   # Email addresses that can send to Kindle
+    - "your-email@gmail.com"
+    - "your-work@company.com"
+  smtp_server: "smtp.gmail.com"       # SMTP server for sending emails
+  smtp_port: 587
+  smtp_username: "your-email@gmail.com"
+  smtp_password: "your-app-password"  # Use app-specific password
+
+# File Processing
+processing:
+  # OCR Settings
+  ocr:
+    language: "eng"                   # OCR language
+    confidence_threshold: 60          # Minimum confidence for text extraction
+    
+  # PDF Generation
+  pdf:
+    page_size: "A4"                   # Page size for generated PDFs
+    margins: [72, 72, 72, 72]        # Top, right, bottom, left margins (points)
+    font_family: "Times-Roman"        # Font for PDF generation
+    font_size: 12                     # Base font size
+    line_spacing: 1.2                 # Line spacing multiplier
+    
+  # Markdown Processing
+  markdown:
+    extensions:                       # Markdown extensions to use
+      - "tables"
+      - "fenced_code"
+      - "toc"
+      - "footnotes"
+    preserve_links: true              # Keep internal Obsidian links
+
+# Sync Settings
+sync:
+  auto_convert_on_save: true          # Convert markdown to PDF when saved
+  auto_send_to_kindle: true           # Automatically send PDFs to Kindle
+  backup_originals: true              # Keep backup of original files
+  backup_folder: "Backups"            # Folder for backups
+  
+# File Patterns
+patterns:
+  markdown_files: "*.md"              # Pattern for markdown files
+  pdf_files: "*.pdf"                  # Pattern for PDF files
+  image_files: "*.{png,jpg,jpeg}"     # Pattern for image files
+  
+# Logging
+logging:
+  level: "INFO"                       # Logging level (DEBUG, INFO, WARNING, ERROR)
+  file: "kindle_sync.log"             # Log file path
+  max_size: "10MB"                    # Maximum log file size
+  backup_count: 5                     # Number of backup log files
+
+# Advanced Settings
+advanced:
+  debounce_time: 2.0                  # Seconds to wait before processing file changes
+  max_file_size: "50MB"               # Maximum file size to process
+  concurrent_processing: true         # Process multiple files concurrently
+  retry_attempts: 3                   # Number of retry attempts for failed operations

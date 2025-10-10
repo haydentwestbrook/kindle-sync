@@ -1,0 +1,76 @@
+version: '3.8'
+
+services:
+  kindle-sync:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kindle-sync
+    restart: unless-stopped
+    
+    # Environment variables
+    environment:
+      - PYTHONUNBUFFERED=1
+      - TZ=America/New_York  # Change to your timezone
+    
+    # Volume mounts
+    volumes:
+      # Mount your Obsidian vault
+      - /path/to/your/obsidian/vault:/app/data/obsidian:rw
+      # Mount config file
+      - ./config.yaml:/app/config.yaml:ro
+      # Mount logs directory
+      - ./logs:/app/logs:rw
+      # Mount backups directory
+      - ./backups:/app/backups:rw
+      # Mount temp directory for processing
+      - ./temp:/app/temp:rw
+    
+    # Network configuration
+    networks:
+      - kindle-sync-network
+    
+    # Resource limits (adjust based on your Pi's capabilities)
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  kindle-sync-network:
+    driver: bridge
+
+# Optional: Add a web interface service for monitoring
+# Uncomment if you want to add a web dashboard
+# services:
+#   kindle-sync-web:
+#     image: nginx:alpine
+#     container_name: kindle-sync-web
+#     restart: unless-stopped
+#     ports:
+#       - "8080:80"
+#     volumes:
+#       - ./web:/usr/share/nginx/html:ro
+#     networks:
+#       - kindle-sync-network
+#     depends_on:
+#       - kindle-sync
