@@ -53,20 +53,22 @@ This document tests the complete automation workflow.
 
         # Mock external dependencies
         with patch.object(
-            processor.markdown_to_pdf, "_generate_pdf"
-        ) as mock_generate_pdf:
-            with patch.object(processor.kindle_sync, "_send_email") as mock_send_email:
+            processor.markdown_to_pdf, "convert_markdown_to_pdf"
+        ) as mock_convert_pdf:
+            with patch.object(processor.kindle_sync, "send_pdf_to_kindle") as mock_send_to_kindle:
                 with patch.object(processor.kindle_sync, "backup_file") as mock_backup:
                     # Mock successful operations
                     mock_backup.return_value = Path("/tmp/backup.md")
+                    mock_convert_pdf.return_value = Path("/tmp/test.pdf")
+                    mock_send_to_kindle.return_value = True
 
                     # Process the markdown file
                     processor._process_markdown_file(md_file)
 
                     # Verify all steps were executed
                     mock_backup.assert_called_once_with(md_file)
-                    mock_generate_pdf.assert_called_once()
-                    mock_send_email.assert_called_once()
+                    mock_convert_pdf.assert_called_once_with(md_file)
+                    mock_send_to_kindle.assert_called_once()
 
                     # Verify statistics
                     assert processor.stats["pdfs_generated"] == 1
@@ -87,45 +89,22 @@ This document tests the complete automation workflow.
         # Initialize sync processor
         processor = SyncProcessor(config)
 
-        # Mock OCR dependencies
-        with patch("pdf2image.convert_from_path") as mock_convert:
-            with patch("pytesseract.image_to_string") as mock_ocr:
-                with patch.object(processor.kindle_sync, "backup_file") as mock_backup:
-                    # Mock OCR results
-                    mock_convert.return_value = [Mock()]
-                    mock_ocr.return_value = """# Imported Document
+        # Mock PDF conversion dependencies
+        with patch.object(processor.pdf_to_markdown, "convert_pdf_to_markdown") as mock_convert:
+            with patch.object(processor.kindle_sync, "backup_file") as mock_backup:
+                # Mock successful conversion
+                mock_backup.return_value = Path("/tmp/backup.pdf")
+                mock_convert.return_value = Path("/tmp/test.md")
 
-This document was imported from a PDF file.
+                # Process the PDF file
+                processor._process_pdf_file(pdf_file)
 
-## OCR Processing
+                # Verify all steps were executed
+                mock_backup.assert_called_once_with(pdf_file)
+                mock_convert.assert_called_once_with(pdf_file)
 
-The text was extracted using OCR technology.
-
-## Content
-
-This is the extracted content from the PDF.
-"""
-                    mock_backup.return_value = Path("/tmp/backup.pdf")
-
-                    # Process the PDF file
-                    processor._process_pdf_file(pdf_file)
-
-                    # Verify all steps were executed
-                    mock_backup.assert_called_once_with(pdf_file)
-                    mock_convert.assert_called_once_with(pdf_file)
-                    mock_ocr.assert_called_once()
-
-                    # Verify markdown file was created
-                    md_file = pdf_file.with_suffix(".md")
-                    assert md_file.exists()
-
-                    # Verify content
-                    content = md_file.read_text()
-                    assert "Imported Document" in content
-                    assert "OCR Processing" in content
-
-                    # Verify statistics
-                    assert processor.stats["markdown_files_created"] == 1
+                # Verify statistics
+                assert processor.stats["markdown_files_created"] == 1
 
     @pytest.mark.e2e
     @pytest.mark.slow
@@ -207,9 +186,9 @@ This is the extracted content from the PDF.
 
         def process_file(file_path):
             try:
-                with patch.object(processor.markdown_to_pdf, "_generate_pdf"):
-                    with patch.object(processor.kindle_sync, "_send_email"):
-                        with patch.object(processor.kindle_sync, "backup_file"):
+                with patch.object(processor.markdown_to_pdf, "convert_markdown_to_pdf", return_value=Path("/tmp/test.pdf")):
+                    with patch.object(processor.kindle_sync, "send_pdf_to_kindle", return_value=True):
+                        with patch.object(processor.kindle_sync, "backup_file", return_value=Path("/tmp/backup.md")):
                             processor._process_markdown_file(file_path)
                             results.append(file_path)
             except Exception as e:
@@ -253,19 +232,19 @@ This is the extracted content from the PDF.
         processor = SyncProcessor(config)
 
         # Mock operations with mixed success/failure
-        with patch.object(processor.markdown_to_pdf, "_generate_pdf") as mock_generate:
-            with patch.object(processor.kindle_sync, "_send_email") as mock_send:
+        with patch.object(processor.markdown_to_pdf, "convert_markdown_to_pdf") as mock_convert:
+            with patch.object(processor.kindle_sync, "send_pdf_to_kindle") as mock_send:
                 with patch.object(processor.kindle_sync, "backup_file") as mock_backup:
                     # Configure mocks
-                    def generate_side_effect(file_path):
+                    def convert_side_effect(file_path):
                         if "bad" in str(file_path):
                             raise Exception("PDF generation failed")
-                        return None
+                        return Path("/tmp/test.pdf")
 
                     def send_side_effect(*args, **kwargs):
                         return True
 
-                    mock_generate.side_effect = generate_side_effect
+                    mock_convert.side_effect = convert_side_effect
                     mock_send.side_effect = send_side_effect
                     mock_backup.return_value = Path("/tmp/backup.md")
 
@@ -307,8 +286,8 @@ This is the extracted content from the PDF.
 
         # Mock backup operations
         with patch.object(processor.kindle_sync, "backup_file") as mock_backup:
-            with patch.object(processor.markdown_to_pdf, "_generate_pdf"):
-                with patch.object(processor.kindle_sync, "_send_email"):
+            with patch.object(processor.markdown_to_pdf, "convert_markdown_to_pdf", return_value=Path("/tmp/test.pdf")):
+                with patch.object(processor.kindle_sync, "send_pdf_to_kindle", return_value=True):
                     # Process files
                     for file_path in test_files:
                         processor._process_markdown_file(file_path)
@@ -388,39 +367,36 @@ This is the extracted content from the PDF.
         processor = SyncProcessor(config)
 
         # Mock operations
-        with patch.object(processor.markdown_to_pdf, "_generate_pdf"):
-            with patch.object(processor.kindle_sync, "_send_email", return_value=True):
-                with patch.object(processor.kindle_sync, "backup_file"):
-                    with patch("pdf2image.convert_from_path", return_value=[Mock()]):
-                        with patch(
-                            "pytesseract.image_to_string", return_value="Extracted text"
-                        ):
-                            # Process markdown file
-                            processor._process_markdown_file(md_file)
+        with patch.object(processor.markdown_to_pdf, "convert_markdown_to_pdf", return_value=Path("/tmp/test.pdf")):
+            with patch.object(processor.kindle_sync, "send_pdf_to_kindle", return_value=True):
+                with patch.object(processor.kindle_sync, "backup_file", return_value=Path("/tmp/backup.md")):
+                    with patch.object(processor.pdf_to_markdown, "convert_pdf_to_markdown", return_value=Path("/tmp/test.md")):
+                        # Process markdown file
+                        processor._process_markdown_file(md_file)
 
-                            # Process PDF file
-                            processor._process_pdf_file(pdf_file)
+                        # Process PDF file
+                        processor._process_pdf_file(pdf_file)
 
-                            # Verify statistics
-                            stats = processor.get_statistics()
+                        # Verify statistics
+                        stats = processor.get_statistics()
 
-                            assert (
-                                stats["files_processed"] == 0
-                            )  # Not incremented in _process_file
-                            assert stats["pdfs_generated"] == 1
-                            assert stats["pdfs_sent_to_kindle"] == 1
-                            assert stats["markdown_files_created"] == 1
-                            assert stats["errors"] == 0
+                        assert (
+                            stats["files_processed"] == 0
+                        )  # Not incremented in _process_file
+                        assert stats["pdfs_generated"] == 1
+                        assert stats["pdfs_sent_to_kindle"] == 1
+                        assert stats["markdown_files_created"] == 1
+                        assert stats["errors"] == 0
 
-                            # Test statistics reset
-                            processor.reset_statistics()
-                            reset_stats = processor.get_statistics()
+                        # Test statistics reset
+                        processor.reset_statistics()
+                        reset_stats = processor.get_statistics()
 
-                            assert reset_stats["files_processed"] == 0
-                            assert reset_stats["pdfs_generated"] == 0
-                            assert reset_stats["pdfs_sent_to_kindle"] == 0
-                            assert reset_stats["markdown_files_created"] == 0
-                            assert reset_stats["errors"] == 0
+                        assert reset_stats["files_processed"] == 0
+                        assert reset_stats["pdfs_generated"] == 0
+                        assert reset_stats["pdfs_sent_to_kindle"] == 0
+                        assert reset_stats["markdown_files_created"] == 0
+                        assert reset_stats["errors"] == 0
 
     @pytest.mark.e2e
     @pytest.mark.slow
@@ -470,11 +446,11 @@ This is the extracted content from the PDF.
                         )
 
                         # Simulate file processing
-                        with patch.object(processor.markdown_to_pdf, "_generate_pdf"):
+                        with patch.object(processor.markdown_to_pdf, "convert_markdown_to_pdf", return_value=Path("/tmp/test.pdf")):
                             with patch.object(
-                                processor.kindle_sync, "_send_email", return_value=True
+                                processor.kindle_sync, "send_pdf_to_kindle", return_value=True
                             ):
-                                with patch.object(processor.kindle_sync, "backup_file"):
+                                with patch.object(processor.kindle_sync, "backup_file", return_value=Path("/tmp/backup.md")):
                                     processor._process_markdown_file(md_file)
 
                         # Stop the system

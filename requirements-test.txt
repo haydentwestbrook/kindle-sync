@@ -41,6 +41,7 @@ mypy>=1.7.0,<2.0.0
 # Type stubs for mypy
 types-PyYAML>=6.0.0,<7.0.0
 types-Markdown>=3.4.0,<4.0.0
+types-requests>=2.32.0,<3.0.0
 
 # Explicit packaging version to resolve conflicts
 packaging>=22.0,<24.0
