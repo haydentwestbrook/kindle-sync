@@ -39,6 +39,7 @@ Options:
     -k, --key KEYFILE       SSH private key file
     -p, --port PORT         SSH port (default: 22)
     -d, --directory DIR     Target directory on Pi (default: /home/pi/kindle-sync)
+    --config FILE           Use config.yaml for deployment settings
     --skip-docker           Skip Docker installation
     --skip-build            Skip Docker image build
     --skip-config           Skip configuration setup
@@ -47,6 +48,7 @@ Options:
 Examples:
     $0 192.168.1.100
     $0 -u pi -k ~/.ssh/id_rsa 192.168.1.100
+    $0 --config config.yaml 192.168.1.100
     $0 --skip-docker 192.168.1.100
 
 EOF
@@ -57,6 +59,7 @@ PI_USER="pi"
 PI_PORT="22"
 PI_DIR="/home/pi/kindle-sync"
 SSH_KEY=""
+CONFIG_FILE=""
 SKIP_DOCKER=false
 SKIP_BUILD=false
 SKIP_CONFIG=false
@@ -78,6 +81,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         -d|--directory)
             PI_DIR="$2"
+            shift 2
+            ;;
+        --config)
+            CONFIG_FILE="$2"
             shift 2
             ;;
         --skip-docker)
@@ -113,6 +120,46 @@ if [ -z "$PI_IP" ]; then
     print_error "Raspberry Pi IP address is required"
     show_usage
     exit 1
+fi
+
+# Function to get config value
+get_config() {
+    local key="$1"
+    local default="$2"
+    
+    if [ -n "$CONFIG_FILE" ] && [ -f "$CONFIG_FILE" ] && command -v yq >/dev/null 2>&1; then
+        yq eval "$key" "$CONFIG_FILE" 2>/dev/null || echo "$default"
+    else
+        echo "$default"
+    fi
+}
+
+# Load configuration from file if specified
+if [ -n "$CONFIG_FILE" ]; then
+    if [ ! -f "$CONFIG_FILE" ]; then
+        print_error "Configuration file not found: $CONFIG_FILE"
+        exit 1
+    fi
+    
+    print_status "Loading configuration from: $CONFIG_FILE"
+    
+    # Override command line arguments with config file values
+    PI_USER=$(get_config '.deployment.pi.user' "$PI_USER")
+    PI_PORT=$(get_config '.deployment.pi.port' "$PI_PORT")
+    PI_DIR=$(get_config '.deployment.pi.directory' "$PI_DIR")
+    SSH_KEY=$(get_config '.deployment.pi.ssh_key' "$SSH_KEY")
+    SKIP_DOCKER=$(get_config '.deployment.options.skip_docker' "$SKIP_DOCKER")
+    SKIP_BUILD=$(get_config '.deployment.options.skip_build' "$SKIP_BUILD")
+    SKIP_CONFIG=$(get_config '.deployment.options.skip_config' "$SKIP_CONFIG")
+    
+    print_status "Configuration loaded:"
+    print_status "  User: $PI_USER"
+    print_status "  Port: $PI_PORT"
+    print_status "  Directory: $PI_DIR"
+    print_status "  SSH Key: ${SSH_KEY:-'None'}"
+    print_status "  Skip Docker: $SKIP_DOCKER"
+    print_status "  Skip Build: $SKIP_BUILD"
+    print_status "  Skip Config: $SKIP_CONFIG"
 fi
 
 # Build SSH command
