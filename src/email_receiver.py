@@ -26,6 +26,7 @@ class EmailReceiver:
         self.sync_folder_path = config.get_sync_folder_path()
         
         logger.info("Email receiver initialized")
+        logger.info(f"Approved senders: {self.approved_senders}")
 
     def get_imap_config(self) -> dict:
         """Get IMAP configuration from config."""
@@ -83,24 +84,27 @@ class EmailReceiver:
             # Select inbox
             mail.select("INBOX")
             
-            # Search for unread emails
-            status, messages = mail.search(None, "UNSEEN")
+            # Search for recent emails (we'll filter by sender in the code)
+            # This is more reliable than complex IMAP queries
+            status, messages = mail.search(None, "ALL")
             if status != "OK":
                 logger.error("Failed to search for emails")
                 return []
 
             email_ids = messages[0].split()
             if not email_ids:
-                logger.debug("No new emails found")
+                logger.debug("No new emails from approved senders found")
                 return []
 
-            # Limit number of emails to process
-            max_emails = self.imap_config["max_emails"]
+            # Limit number of emails to process (check more emails to find Kindle emails)
+            max_emails = 100  # Check up to 100 emails to find Kindle emails
             email_ids = email_ids[-max_emails:] if len(email_ids) > max_emails else email_ids
 
-            logger.info(f"Found {len(email_ids)} new emails to process")
+            logger.info(f"Found {len(email_ids)} emails to check for approved senders")
+            
+            approved_emails_found = 0
 
-            for email_id in email_ids:
+            for i, email_id in enumerate(email_ids, 1):
                 try:
                     # Fetch email
                     status, msg_data = mail.fetch(email_id, "(RFC822)")
@@ -114,13 +118,22 @@ class EmailReceiver:
                     
                     # Check if email is from approved sender
                     sender = self._get_sender_email(email_message)
+                    logger.info(f"Email {i}/{len(email_ids)}: From '{sender}'")
+                    
                     if not self._is_approved_sender(sender):
-                        logger.debug(f"Email from {sender} is not from approved sender")
+                        logger.info(f"  → Rejected: Not from approved sender")
                         continue
-
+                    
+                    approved_emails_found += 1
+                    logger.info(f"  → APPROVED: Processing email from {sender} (#{approved_emails_found})")
+                    
                     # Process email for PDF attachments
                     pdf_files = self._process_email_attachments(email_message, email_id)
-                    processed_files.extend(pdf_files)
+                    if pdf_files:
+                        logger.info(f"  → Found {len(pdf_files)} PDF files in email")
+                        processed_files.extend(pdf_files)
+                    else:
+                        logger.info(f"  → No PDF files found in email")
 
                     # Mark as read if configured
                     if self.imap_config["mark_as_read"]:
@@ -144,9 +157,11 @@ class EmailReceiver:
             try:
                 mail.close()
                 mail.logout()
+                logger.debug("IMAP connection closed")
             except:
                 pass
 
+        logger.info(f"Email processing completed. Processed {len(processed_files)} PDF files.")
         return processed_files
 
     def _get_sender_email(self, email_message) -> str:
@@ -188,39 +203,59 @@ class EmailReceiver:
             subject = self._decode_header(email_message.get("Subject", "No Subject"))
             logger.info(f"Processing email: {subject}")
             
+            logger.debug(f"  → Checking email for PDFs...")
+            
             # First, try to find download links in email body
             download_links = self._extract_download_links(email_message)
+            logger.debug(f"  → Found {len(download_links)} download links")
+            
             if download_links:
-                logger.info(f"Found {len(download_links)} download links in email")
-                for link in download_links:
-                    pdf_path = self._download_pdf_from_link(link, email_id)
-                    if pdf_path:
-                        processed_files.append(pdf_path)
-                        logger.info(f"Downloaded PDF from link: {pdf_path}")
+                logger.info(f"  → Processing {len(download_links)} download links")
+                for i, link in enumerate(download_links, 1):
+                    try:
+                        logger.debug(f"  → Downloading link {i}/{len(download_links)}: {link[:50]}...")
+                        pdf_path = self._download_pdf_from_link(link, email_id)
+                        if pdf_path:
+                            processed_files.append(pdf_path)
+                            logger.info(f"  → Downloaded PDF: {pdf_path}")
+                        else:
+                            logger.debug(f"  → Link {i} did not yield a PDF")
+                    except Exception as e:
+                        logger.error(f"  → Failed to download PDF from link {i}: {e}")
             
             # Also check for traditional attachments
+            logger.debug(f"  → Checking for traditional attachments...")
+            attachment_count = 0
+            pdf_attachment_count = 0
+            
             for part in email_message.walk():
                 # Check if part is an attachment
                 if part.get_content_disposition() == "attachment":
+                    attachment_count += 1
                     filename = part.get_filename()
                     if filename:
                         # Decode filename if needed
                         filename = self._decode_header(filename)
+                        logger.debug(f"  → Found attachment {attachment_count}: {filename}")
                         
                         # Check if it's a PDF file
                         if filename.lower().endswith('.pdf'):
-                            logger.info(f"Found PDF attachment: {filename}")
+                            pdf_attachment_count += 1
+                            logger.info(f"  → Found PDF attachment: {filename}")
                             
                             # Save PDF to sync folder
                             pdf_path = self._save_pdf_attachment(part, filename, email_id)
                             if pdf_path:
                                 processed_files.append(pdf_path)
-                                logger.info(f"Saved PDF: {pdf_path}")
+                                logger.info(f"  → Saved PDF: {pdf_path}")
                         else:
-                            logger.debug(f"Skipping non-PDF attachment: {filename}")
+                            logger.debug(f"  → Skipping non-PDF attachment: {filename}")
+            
+            logger.debug(f"  → Found {attachment_count} total attachments, {pdf_attachment_count} PDFs")
+            logger.debug(f"  → Email processing complete: {len(processed_files)} PDFs processed")
                             
         except Exception as e:
-            logger.error(f"Error processing email attachments: {e}")
+            logger.error(f"  → Error processing email attachments: {e}")
             
         return processed_files
 
@@ -353,13 +388,16 @@ class EmailReceiver:
         try:
             logger.info(f"Downloading PDF from: {url}")
             
-            # Make request to download the PDF
+            # Make request to download the PDF with proper redirect handling
             headers = {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
             }
             
-            response = requests.get(url, headers=headers, timeout=30)
+            # Follow redirects to get the actual PDF
+            response = requests.get(url, headers=headers, timeout=30, allow_redirects=True)
             response.raise_for_status()
+            
+            logger.debug(f"Final URL after redirects: {response.url}")
             
             # Check if it's actually a PDF
             content_type = response.headers.get('content-type', '').lower()
@@ -367,14 +405,12 @@ class EmailReceiver:
                 logger.warning(f"Downloaded content doesn't appear to be a PDF: {content_type}")
                 return None
             
-            # Generate filename
+            # Generate simple filename to avoid filesystem limits
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             email_id_str = email_id.decode() if isinstance(email_id, bytes) else str(email_id)
             
-            # Try to get filename from URL or Content-Disposition header
-            filename = self._extract_filename_from_response(response, url)
-            if not filename:
-                filename = f"kindle_document_{timestamp}_{email_id_str}.pdf"
+            # Use simple filename to avoid filesystem issues
+            filename = f"kindle_doc_{timestamp}_{email_id_str}.pdf"
             
             # Ensure sync folder exists
             self.sync_folder_path.mkdir(parents=True, exist_ok=True)

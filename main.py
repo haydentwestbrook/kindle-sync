@@ -68,6 +68,8 @@ class KindleSyncApp:
         # Check if it's time to check emails
         if current_time - self.last_email_check >= check_interval:
             try:
+                logger.debug("Starting email check...")
+                
                 # Process new emails
                 processed_files = self.email_receiver.check_for_new_emails()
                 
@@ -79,8 +81,11 @@ class KindleSyncApp:
                         # The file watcher should pick up these new files automatically
                         # But we can also trigger processing directly if needed
                         logger.info(f"New PDF from email: {pdf_path}")
+                else:
+                    logger.debug("No new PDF files found in emails")
                 
                 self.last_email_check = current_time
+                logger.debug("Email check completed successfully")
                 
             except Exception as e:
                 logger.error(f"Error checking emails: {e}")
