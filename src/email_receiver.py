@@ -405,6 +405,11 @@ class EmailReceiver:
                 logger.warning(f"Downloaded content doesn't appear to be a PDF: {content_type}")
                 return None
             
+            # Additional check: verify the file starts with PDF header
+            if not response.content.startswith(b'%PDF'):
+                logger.warning(f"Downloaded content doesn't have PDF header, got: {response.content[:20]}")
+                return None
+            
             # Generate simple filename to avoid filesystem limits
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             email_id_str = email_id.decode() if isinstance(email_id, bytes) else str(email_id)
