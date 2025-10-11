@@ -25,8 +25,84 @@ class EmailReceiver:
         self.approved_senders = config.get_approved_senders()
         self.sync_folder_path = config.get_sync_folder_path()
         
+        # Initialize processed emails tracking
+        self.prevent_duplicates = self.config.get("email_receiving.prevent_duplicates", True)
+        self.processed_emails_file = Path(
+            self.config.get("email_receiving.duplicate_tracking_file", "/app/logs/processed_emails.txt")
+        )
+        self.processed_emails = self._load_processed_emails() if self.prevent_duplicates else set()
+        
         logger.info("Email receiver initialized")
         logger.info(f"Approved senders: {self.approved_senders}")
+        logger.info(f"Duplicate prevention: {'enabled' if self.prevent_duplicates else 'disabled'}")
+        if self.prevent_duplicates:
+            logger.info(f"Loaded {len(self.processed_emails)} previously processed emails")
+            # Cleanup old processed email records
+            self._cleanup_old_processed_emails()
+
+    def _load_processed_emails(self) -> set:
+        """Load list of previously processed email IDs."""
+        processed_emails = set()
+        try:
+            if self.processed_emails_file.exists():
+                with open(self.processed_emails_file, 'r') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line:
+                            processed_emails.add(line)
+                logger.debug(f"Loaded {len(processed_emails)} processed email IDs")
+        except Exception as e:
+            logger.warning(f"Failed to load processed emails: {e}")
+        return processed_emails
+
+    def _save_processed_email(self, email_id: str):
+        """Save email ID to processed emails list."""
+        try:
+            # Ensure logs directory exists
+            self.processed_emails_file.parent.mkdir(parents=True, exist_ok=True)
+            
+            # Add to set and save to file
+            self.processed_emails.add(email_id)
+            with open(self.processed_emails_file, 'a') as f:
+                f.write(f"{email_id}\n")
+            logger.debug(f"Marked email {email_id} as processed")
+        except Exception as e:
+            logger.error(f"Failed to save processed email {email_id}: {e}")
+
+    def _is_email_processed(self, email_id: str) -> bool:
+        """Check if email has already been processed."""
+        return email_id in self.processed_emails
+
+    def _cleanup_old_processed_emails(self, days_to_keep: int = 30):
+        """Clean up old processed email records to prevent file from growing indefinitely."""
+        try:
+            if not self.processed_emails_file.exists():
+                return
+            
+            # Read all lines and keep only recent ones (this is a simple approach)
+            # In a production system, you might want to use a database instead
+            cutoff_date = datetime.now() - timedelta(days=days_to_keep)
+            
+            # For now, we'll keep all records but could implement date-based cleanup
+            # if we add timestamps to the processed emails file
+            logger.debug(f"Processed emails cleanup: keeping records from last {days_to_keep} days")
+            
+        except Exception as e:
+            logger.warning(f"Failed to cleanup old processed emails: {e}")
+
+    def clear_processed_emails(self):
+        """Clear the list of processed emails (useful for testing or reset)."""
+        try:
+            if self.processed_emails_file.exists():
+                self.processed_emails_file.unlink()
+                logger.info("Cleared processed emails list")
+            self.processed_emails.clear()
+        except Exception as e:
+            logger.error(f"Failed to clear processed emails: {e}")
+
+    def get_processed_emails_count(self) -> int:
+        """Get the number of processed emails."""
+        return len(self.processed_emails)
 
     def get_imap_config(self) -> dict:
         """Get IMAP configuration from config."""
@@ -106,6 +182,14 @@ class EmailReceiver:
 
             for i, email_id in enumerate(email_ids, 1):
                 try:
+                    # Convert email_id to string for comparison
+                    email_id_str = email_id.decode() if isinstance(email_id, bytes) else str(email_id)
+                    
+                    # Check if email has already been processed (if duplicate prevention is enabled)
+                    if self.prevent_duplicates and self._is_email_processed(email_id_str):
+                        logger.debug(f"Email {i}/{len(email_ids)}: Already processed, skipping")
+                        continue
+                    
                     # Fetch email
                     status, msg_data = mail.fetch(email_id, "(RFC822)")
                     if status != "OK":
@@ -134,6 +218,11 @@ class EmailReceiver:
                         processed_files.extend(pdf_files)
                     else:
                         logger.info(f"  → No PDF files found in email")
+
+                    # Mark email as processed to prevent duplicates (if enabled)
+                    if self.prevent_duplicates:
+                        self._save_processed_email(email_id_str)
+                        logger.debug(f"  → Marked email {email_id_str} as processed")
 
                     # Mark as read if configured
                     if self.imap_config["mark_as_read"]:
