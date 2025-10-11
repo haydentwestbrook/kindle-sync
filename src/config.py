@@ -101,6 +101,19 @@ class Config:
             "password": self.get("kindle.smtp_password", ""),
         }
 
+    def get_imap_config(self) -> Dict[str, Any]:
+        """Get IMAP configuration for email receiving."""
+        return {
+            "server": self.get("email_receiving.imap_server", ""),
+            "port": self.get("email_receiving.imap_port", 993),
+            "username": self.get("email_receiving.username", ""),
+            "password": self.get("email_receiving.password", ""),
+            "check_interval": self.get("email_receiving.check_interval", 300),
+            "max_emails": self.get("email_receiving.max_emails_per_check", 10),
+            "mark_as_read": self.get("email_receiving.mark_as_read", True),
+            "delete_after": self.get("email_receiving.delete_after_processing", False),
+        }
+
     def get_ocr_config(self) -> Dict[str, Any]:
         """Get OCR configuration."""
         return self.get("processing.ocr", {})

@@ -10,6 +10,7 @@ import click
 
 from src.config import Config
 from src.sync_processor import SyncProcessor
+from src.email_receiver import EmailReceiver
 
 
 class KindleSyncApp:
@@ -19,7 +20,9 @@ class KindleSyncApp:
         """Initialize the application."""
         self.config = Config(config_path)
         self.processor = SyncProcessor(self.config)
+        self.email_receiver = EmailReceiver(self.config)
         self.running = False
+        self.last_email_check = 0
         
         # Set up logging
         self._setup_logging()
@@ -57,6 +60,33 @@ class KindleSyncApp:
         logger.info(f"Received signal {signum}, shutting down...")
         self.running = False
     
+    def _check_emails(self):
+        """Check for new emails periodically."""
+        current_time = time.time()
+        check_interval = self.email_receiver.imap_config.get("check_interval", 300)
+        
+        # Check if it's time to check emails
+        if current_time - self.last_email_check >= check_interval:
+            try:
+                # Process new emails
+                processed_files = self.email_receiver.check_for_new_emails()
+                
+                if processed_files:
+                    logger.info(f"Processed {len(processed_files)} PDF files from emails")
+                    
+                    # Trigger file processing for each PDF
+                    for pdf_path in processed_files:
+                        # The file watcher should pick up these new files automatically
+                        # But we can also trigger processing directly if needed
+                        logger.info(f"New PDF from email: {pdf_path}")
+                
+                self.last_email_check = current_time
+                
+            except Exception as e:
+                logger.error(f"Error checking emails: {e}")
+                # Still update the last check time to avoid rapid retries
+                self.last_email_check = current_time
+    
     def start(self):
         """Start the sync system."""
         try:
@@ -77,6 +107,9 @@ class KindleSyncApp:
                 if not self.processor.file_watcher.is_alive():
                     logger.error("File watcher stopped unexpectedly")
                     break
+                
+                # Check for new emails periodically
+                self._check_emails()
             
             return True
             
