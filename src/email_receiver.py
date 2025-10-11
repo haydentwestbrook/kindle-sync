@@ -3,6 +3,8 @@
 import email
 import imaplib
 import ssl
+import re
+import requests
 from email.header import decode_header
 from pathlib import Path
 from typing import List, Optional, Tuple
@@ -178,7 +180,7 @@ class EmailReceiver:
         return False
 
     def _process_email_attachments(self, email_message, email_id: bytes) -> List[Path]:
-        """Process email attachments and save PDF files."""
+        """Process email attachments and download links, save PDF files."""
         processed_files = []
         
         try:
@@ -186,7 +188,17 @@ class EmailReceiver:
             subject = self._decode_header(email_message.get("Subject", "No Subject"))
             logger.info(f"Processing email: {subject}")
             
-            # Walk through email parts
+            # First, try to find download links in email body
+            download_links = self._extract_download_links(email_message)
+            if download_links:
+                logger.info(f"Found {len(download_links)} download links in email")
+                for link in download_links:
+                    pdf_path = self._download_pdf_from_link(link, email_id)
+                    if pdf_path:
+                        processed_files.append(pdf_path)
+                        logger.info(f"Downloaded PDF from link: {pdf_path}")
+            
+            # Also check for traditional attachments
             for part in email_message.walk():
                 # Check if part is an attachment
                 if part.get_content_disposition() == "attachment":
@@ -262,6 +274,146 @@ class EmailReceiver:
         except Exception as e:
             logger.error(f"Error saving PDF attachment: {e}")
             return None
+
+    def _extract_download_links(self, email_message) -> List[str]:
+        """Extract download links from email body."""
+        download_links = []
+        
+        try:
+            # Get email body
+            body = self._get_email_body(email_message)
+            if not body:
+                return download_links
+            
+            # Look for Kindle download link patterns
+            # Pattern 1: Direct download links
+            link_patterns = [
+                r'https://[^\s]*\.pdf[^\s]*',  # Direct PDF links
+                r'https://[^\s]*download[^\s]*',  # Download links
+                r'https://[^\s]*kindle[^\s]*',  # Kindle-specific links
+                r'<a[^>]*href=["\']([^"\']*)["\'][^>]*>.*?Download PDF.*?</a>',  # HTML download links
+            ]
+            
+            for pattern in link_patterns:
+                matches = re.findall(pattern, body, re.IGNORECASE | re.DOTALL)
+                for match in matches:
+                    if isinstance(match, tuple):
+                        match = match[0]  # Extract URL from regex group
+                    
+                    # Clean up the URL
+                    url = match.strip()
+                    if url and url.startswith('http'):
+                        download_links.append(url)
+                        logger.debug(f"Found download link: {url}")
+            
+            # Remove duplicates while preserving order
+            download_links = list(dict.fromkeys(download_links))
+            
+        except Exception as e:
+            logger.error(f"Error extracting download links: {e}")
+            
+        return download_links
+
+    def _get_email_body(self, email_message) -> str:
+        """Extract email body text."""
+        body = ""
+        
+        try:
+            if email_message.is_multipart():
+                for part in email_message.walk():
+                    content_type = part.get_content_type()
+                    content_disposition = str(part.get("Content-Disposition"))
+                    
+                    # Skip attachments
+                    if "attachment" in content_disposition:
+                        continue
+                    
+                    # Get text content
+                    if content_type == "text/plain":
+                        payload = part.get_payload(decode=True)
+                        if payload:
+                            body += payload.decode('utf-8', errors='ignore')
+                    elif content_type == "text/html":
+                        payload = part.get_payload(decode=True)
+                        if payload:
+                            body += payload.decode('utf-8', errors='ignore')
+            else:
+                # Single part message
+                payload = email_message.get_payload(decode=True)
+                if payload:
+                    body = payload.decode('utf-8', errors='ignore')
+                    
+        except Exception as e:
+            logger.error(f"Error extracting email body: {e}")
+            
+        return body
+
+    def _download_pdf_from_link(self, url: str, email_id: bytes) -> Optional[Path]:
+        """Download PDF from a download link."""
+        try:
+            logger.info(f"Downloading PDF from: {url}")
+            
+            # Make request to download the PDF
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+            
+            response = requests.get(url, headers=headers, timeout=30)
+            response.raise_for_status()
+            
+            # Check if it's actually a PDF
+            content_type = response.headers.get('content-type', '').lower()
+            if 'pdf' not in content_type and not url.lower().endswith('.pdf'):
+                logger.warning(f"Downloaded content doesn't appear to be a PDF: {content_type}")
+                return None
+            
+            # Generate filename
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            email_id_str = email_id.decode() if isinstance(email_id, bytes) else str(email_id)
+            
+            # Try to get filename from URL or Content-Disposition header
+            filename = self._extract_filename_from_response(response, url)
+            if not filename:
+                filename = f"kindle_document_{timestamp}_{email_id_str}.pdf"
+            
+            # Ensure sync folder exists
+            self.sync_folder_path.mkdir(parents=True, exist_ok=True)
+            
+            # Save file
+            pdf_path = self.sync_folder_path / filename
+            
+            with open(pdf_path, 'wb') as f:
+                f.write(response.content)
+            
+            logger.info(f"Downloaded PDF: {pdf_path} ({len(response.content)} bytes)")
+            return pdf_path
+            
+        except Exception as e:
+            logger.error(f"Error downloading PDF from {url}: {e}")
+            return None
+
+    def _extract_filename_from_response(self, response, url: str) -> str:
+        """Extract filename from response headers or URL."""
+        try:
+            # Try Content-Disposition header first
+            content_disposition = response.headers.get('Content-Disposition', '')
+            if content_disposition:
+                filename_match = re.search(r'filename[^;=\n]*=(([\'"]).*?\2|[^;\n]*)', content_disposition)
+                if filename_match:
+                    filename = filename_match.group(1).strip('\'"')
+                    if filename:
+                        return filename
+            
+            # Try to extract from URL
+            if url:
+                url_path = url.split('/')[-1]
+                if url_path and '.' in url_path:
+                    return url_path
+                    
+        except Exception as e:
+            logger.debug(f"Error extracting filename: {e}")
+            
+        return ""
 
     def start_polling(self, callback_func=None):
         """Start polling for new emails (for use in main application loop)."""
