@@ -4,6 +4,7 @@
 import sys
 import signal
 import time
+import asyncio
 from pathlib import Path
 from loguru import logger
 import click
@@ -11,6 +12,7 @@ import click
 from src.config import Config
 from src.sync_processor import SyncProcessor
 from src.email_receiver import EmailReceiver
+from src.async_main import AsyncKindleSyncApp
 
 
 class KindleSyncApp:
@@ -145,22 +147,38 @@ def cli():
 @cli.command()
 @click.option('--config', '-c', default='config.yaml', help='Configuration file path')
 @click.option('--daemon', '-d', is_flag=True, help='Run as daemon')
-def start(config: str, daemon: bool):
+@click.option('--async', '-a', is_flag=True, help='Run in async mode with database and monitoring')
+def start(config: str, daemon: bool, async: bool):
     """Start the sync system."""
-    app = KindleSyncApp(config)
-    
-    if daemon:
-        # TODO: Implement daemon mode
-        click.echo("Daemon mode not yet implemented")
-        return
-    
-    try:
-        app.start()
-    except KeyboardInterrupt:
-        click.echo("\nShutdown requested by user")
-    except Exception as e:
-        click.echo(f"Error: {e}")
-        sys.exit(1)
+    if async:
+        # Run async version with database and monitoring
+        async def run_async():
+            app = AsyncKindleSyncApp(Path(config))
+            await app.run()
+        
+        try:
+            asyncio.run(run_async())
+        except KeyboardInterrupt:
+            click.echo("\nShutdown requested by user")
+        except Exception as e:
+            click.echo(f"Error: {e}")
+            sys.exit(1)
+    else:
+        # Run traditional sync version
+        app = KindleSyncApp(config)
+        
+        if daemon:
+            # TODO: Implement daemon mode
+            click.echo("Daemon mode not yet implemented")
+            return
+        
+        try:
+            app.start()
+        except KeyboardInterrupt:
+            click.echo("\nShutdown requested by user")
+        except Exception as e:
+            click.echo(f"Error: {e}")
+            sys.exit(1)
 
 
 @cli.command()
@@ -221,6 +239,55 @@ def validate(config: str):
         else:
             click.echo("Configuration validation failed")
             sys.exit(1)
+    except Exception as e:
+        click.echo(f"Error: {e}")
+        sys.exit(1)
+
+
+@cli.command()
+@click.option('--config', '-c', default='config.yaml', help='Configuration file path')
+@click.option('--port', '-p', default=8080, help='Port for monitoring server')
+@click.option('--host', '-h', default='0.0.0.0', help='Host for monitoring server')
+def monitor(config: str, port: int, host: str):
+    """Start monitoring server only (for async mode)."""
+    async def run_monitor():
+        from src.database.manager import DatabaseManager
+        from src.monitoring.health_checks import HealthChecker
+        from src.monitoring.metrics import MetricsCollector
+        from src.monitoring.prometheus_exporter import PrometheusExporter
+        
+        # Initialize components
+        app_config = Config(config)
+        db_path = Path(app_config.get("database.path", "data/kindle_sync.db"))
+        db_manager = DatabaseManager(db_path)
+        metrics_collector = MetricsCollector()
+        health_checker = HealthChecker(app_config, db_manager)
+        
+        # Start Prometheus exporter
+        exporter = PrometheusExporter(app_config, db_manager, metrics_collector, health_checker)
+        runner = await exporter.start_server(host, port)
+        
+        click.echo(f"Monitoring server started on http://{host}:{port}")
+        click.echo("Available endpoints:")
+        click.echo("  GET /metrics - Prometheus metrics")
+        click.echo("  GET /health - Overall health status")
+        click.echo("  GET /health/ready - Readiness probe")
+        click.echo("  GET /health/live - Liveness probe")
+        click.echo("  GET /status - Detailed application status")
+        click.echo("Press Ctrl+C to stop")
+        
+        try:
+            while True:
+                await asyncio.sleep(1)
+        except KeyboardInterrupt:
+            click.echo("\nShutting down monitoring server...")
+            await exporter.stop_server(runner)
+            db_manager.close()
+    
+    try:
+        asyncio.run(run_monitor())
+    except KeyboardInterrupt:
+        click.echo("\nShutdown requested by user")
     except Exception as e:
         click.echo(f"Error: {e}")
         sys.exit(1)
