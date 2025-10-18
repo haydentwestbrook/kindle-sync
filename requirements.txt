@@ -26,3 +26,9 @@ pypandoc==1.11
 # Logging and utilities
 loguru==0.7.2
 click==8.1.7
+
+# Phase 1: Security & Reliability
+cryptography==41.0.7
+tenacity==8.2.3
+pydantic==2.5.0
+python-magic==0.4.27

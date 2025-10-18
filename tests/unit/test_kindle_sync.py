@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch
 import pytest
 
 from src.kindle_sync import KindleSync
+from src.core.exceptions import EmailServiceError, FileProcessingError
 
 
 class TestKindleSync:
@@ -30,7 +31,7 @@ class TestKindleSync:
         pdf_file.write_bytes(sample_pdf_content)
 
         # Mock SMTP
-        with patch.object(kindle_sync, "_send_email") as mock_send:
+        with patch.object(kindle_sync, "_send_email_with_retry") as mock_send:
             result = kindle_sync.send_pdf_to_kindle(pdf_file)
 
             assert result is True
@@ -55,7 +56,7 @@ class TestKindleSync:
         custom_subject = "Custom Document Title"
 
         # Mock SMTP
-        with patch.object(kindle_sync, "_send_email") as mock_send:
+        with patch.object(kindle_sync, "_send_email_with_retry") as mock_send:
             result = kindle_sync.send_pdf_to_kindle(pdf_file, custom_subject)
 
             assert result is True
@@ -70,9 +71,8 @@ class TestKindleSync:
 
         non_existent_file = temp_dir / "non_existent.pdf"
 
-        result = kindle_sync.send_pdf_to_kindle(non_existent_file)
-
-        assert result is False
+        with pytest.raises(EmailServiceError):
+            kindle_sync.send_pdf_to_kindle(non_existent_file)
 
     def test_send_pdf_to_kindle_smtp_error(self, config, temp_dir, sample_pdf_content):
         """Test PDF sending with SMTP error."""
@@ -84,11 +84,10 @@ class TestKindleSync:
 
         # Mock SMTP to raise exception
         with patch.object(
-            kindle_sync, "_send_email", side_effect=Exception("SMTP error")
+            kindle_sync, "_send_email_with_retry", side_effect=Exception("SMTP error")
         ):
-            result = kindle_sync.send_pdf_to_kindle(pdf_file)
-
-            assert result is False
+            with pytest.raises(EmailServiceError):
+                kindle_sync.send_pdf_to_kindle(pdf_file)
 
     def test_send_email_success(self, config):
         """Test successful email sending."""
@@ -105,7 +104,7 @@ class TestKindleSync:
             mock_server = Mock()
             mock_smtp_class.return_value = mock_server
 
-            kindle_sync._send_email(msg)
+            kindle_sync._send_email_with_retry(msg)
 
             # Verify SMTP operations
             mock_smtp_class.assert_called_once_with("smtp.gmail.com", 587)
@@ -127,7 +126,7 @@ class TestKindleSync:
         # Mock SMTP to raise exception
         with patch("smtplib.SMTP", side_effect=Exception("SMTP connection error")):
             with pytest.raises(Exception, match="SMTP connection error"):
-                kindle_sync._send_email(msg)
+                kindle_sync._send_email_with_retry(msg)
 
     def test_copy_to_kindle_usb_success(self, config, temp_dir, sample_pdf_content):
         """Test successful USB copy to Kindle."""
@@ -261,9 +260,8 @@ class TestKindleSync:
             return_value={"backup_originals": True, "backup_folder": "/invalid/path"},
         ):
             with patch("shutil.copy2", side_effect=Exception("Copy error")):
-                result = kindle_sync.backup_file(original_file)
-
-                assert result is None
+                with pytest.raises(FileProcessingError):
+                    kindle_sync.backup_file(original_file)
 
     def test_get_kindle_documents_success(self, config, temp_dir):
         """Test getting Kindle documents successfully."""

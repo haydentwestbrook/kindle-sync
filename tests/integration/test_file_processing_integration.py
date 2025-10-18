@@ -168,7 +168,8 @@ class TestFileProcessingIntegration:
         # Step 1: Convert markdown to PDF
         with patch("weasyprint.HTML") as mock_html_class:
             mock_html = Mock()
-            mock_html.write_pdf.return_value = b"Generated PDF content"
+            # Create a valid PDF header for validation
+            mock_html.write_pdf.return_value = b"%PDF-1.4\n1 0 obj\n<<\n/Type /Catalog\n/Pages 2 0 R\n>>\nendobj\n\n2 0 obj\n<<\n/Type /Pages\n/Kids [3 0 R]\n/Count 1\n>>\nendobj\n\n3 0 obj\n<<\n/Type /Page\n/Parent 2 0 R\n/MediaBox [0 0 612 792]\n>>\nendobj\n\nxref\n0 4\n0000000000 65535 f \n0000000009 00000 n \n0000000058 00000 n \n0000000115 00000 n \ntrailer\n<<\n/Size 4\n/Root 1 0 R\n>>\nstartxref\n204\n%%EOF"
             mock_html_class.return_value = mock_html
 
             pdf_path = pdf_converter.convert_markdown_to_pdf(md_file)
@@ -196,7 +197,7 @@ class TestFileProcessingIntegration:
             assert backup_path.exists()
 
         # Step 3: Send PDF to Kindle (mocked)
-        with patch.object(kindle_sync, "_send_email") as mock_send:
+        with patch.object(kindle_sync, "_send_email_with_retry") as mock_send:
             result = kindle_sync.send_pdf_to_kindle(pdf_path)
 
             # Verify email was sent

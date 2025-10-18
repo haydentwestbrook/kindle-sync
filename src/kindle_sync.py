@@ -11,6 +11,9 @@ from typing import List, Optional
 from loguru import logger
 
 from .config import Config
+from .core.exceptions import EmailServiceError, FileProcessingError, ErrorSeverity
+from .core.retry import retry_on_network_error, retry_on_file_error
+from .security.validation import FileValidator, FileValidationRequest
 
 
 class KindleSync:
@@ -22,15 +25,27 @@ class KindleSync:
         self.kindle_email = config.get_kindle_email()
         self.smtp_config = config.get_smtp_config()
         self.sync_config = config.get_sync_config()
+        self.file_validator = FileValidator()
 
         logger.info("Kindle sync initialized")
 
     def send_pdf_to_kindle(self, pdf_path: Path, subject: Optional[str] = None) -> bool:
         """Send a PDF file to Kindle via email."""
         try:
-            if not pdf_path.exists():
-                logger.error(f"PDF file does not exist: {pdf_path}")
-                return False
+            # Validate file before processing
+            validation_request = FileValidationRequest(
+                file_path=pdf_path,
+                allowed_extensions=[".pdf"],
+                allowed_mime_types=["application/pdf"]
+            )
+            validation_result = self.file_validator.validate_file(validation_request)
+            
+            if not validation_result.valid:
+                raise FileProcessingError(
+                    f"PDF validation failed: {validation_result.error}",
+                    file_path=str(pdf_path),
+                    severity=ErrorSeverity.HIGH
+                )
 
             # Generate subject if not provided
             if subject is None:
@@ -54,18 +69,24 @@ class KindleSync:
                 )
                 msg.attach(pdf_attachment)
 
-            # Send email
-            self._send_email(msg)
+            # Send email with retry
+            self._send_email_with_retry(msg)
 
             logger.info(f"Sent {pdf_path.name} to Kindle")
             return True
 
+        except FileProcessingError:
+            raise
         except Exception as e:
-            logger.error(f"Error sending PDF to Kindle: {e}")
-            return False
+            raise EmailServiceError(
+                f"Error sending PDF to Kindle: {e}",
+                email_address=self.kindle_email,
+                severity=ErrorSeverity.HIGH
+            )
 
-    def _send_email(self, msg: MIMEMultipart):
-        """Send email using SMTP."""
+    @retry_on_network_error(max_attempts=3, wait_min=2.0, wait_max=30.0)
+    def _send_email_with_retry(self, msg: MIMEMultipart):
+        """Send email using SMTP with retry logic."""
         try:
             # Create SMTP session
             server = smtplib.SMTP(self.smtp_config["server"], self.smtp_config["port"])
@@ -80,8 +101,11 @@ class KindleSync:
             logger.info("Email sent successfully")
 
         except Exception as e:
-            logger.error(f"Error sending email: {e}")
-            raise
+            raise EmailServiceError(
+                f"Error sending email: {e}",
+                email_address=self.kindle_email,
+                severity=ErrorSeverity.HIGH
+            )
 
     def copy_to_kindle_usb(
         self, pdf_path: Path, kindle_path: Optional[Path] = None
@@ -115,11 +139,26 @@ class KindleSync:
             logger.error(f"Error copying to Kindle USB: {e}")
             return False
 
+    @retry_on_file_error(max_attempts=3, wait_min=0.5, wait_max=5.0)
     def backup_file(self, file_path: Path) -> Optional[Path]:
         """Create a backup of a file."""
         try:
             if not self.sync_config.get("backup_originals", True):
                 return None
+
+            # Validate file before backup
+            validation_request = FileValidationRequest(
+                file_path=file_path,
+                max_size_mb=100  # Allow larger files for backup
+            )
+            validation_result = self.file_validator.validate_file(validation_request)
+            
+            if not validation_result.valid:
+                raise FileProcessingError(
+                    f"File validation failed for backup: {validation_result.error}",
+                    file_path=str(file_path),
+                    severity=ErrorSeverity.MEDIUM
+                )
 
             backup_folder = Path(self.sync_config.get("backup_folder", "Backups"))
             backup_folder.mkdir(parents=True, exist_ok=True)
@@ -136,9 +175,14 @@ class KindleSync:
             logger.info(f"Created backup: {backup_path}")
             return backup_path
 
+        except FileProcessingError:
+            raise
         except Exception as e:
-            logger.error(f"Error creating backup: {e}")
-            return None
+            raise FileProcessingError(
+                f"Error creating backup: {e}",
+                file_path=str(file_path),
+                severity=ErrorSeverity.MEDIUM
+            )
 
     def get_kindle_documents(self, kindle_path: Optional[Path] = None) -> List[Path]:
         """Get list of documents from Kindle."""

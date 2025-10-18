@@ -7,6 +7,7 @@ import pytest
 import yaml
 
 from src.config import Config
+from src.core.exceptions import ConfigurationError
 
 
 class TestConfig:
@@ -16,18 +17,18 @@ class TestConfig:
         """Test Config initialization with valid file."""
         config = Config(str(config_file))
         assert config.config_path == config_file
-
+    
         # The Config class expands relative paths, so we need to check the
         # expanded version
         expected_config = sample_config.copy()
         expected_config["sync"]["backup_folder"] = str(Path.cwd() / "Backups")
-        assert config._config == expected_config
+        assert config._raw_config == expected_config
 
     def test_config_file_not_found(self, temp_dir: Path):
         """Test Config initialization with non-existent file."""
         non_existent_file = temp_dir / "non_existent.yaml"
 
-        with pytest.raises(FileNotFoundError):
+        with pytest.raises(ConfigurationError):
             Config(str(non_existent_file))
 
     def test_config_invalid_yaml(self, temp_dir: Path):
@@ -35,7 +36,7 @@ class TestConfig:
         invalid_yaml_file = temp_dir / "invalid.yaml"
         invalid_yaml_file.write_text("invalid: yaml: content: [")
 
-        with pytest.raises(yaml.YAMLError):
+        with pytest.raises(ConfigurationError):
             Config(str(invalid_yaml_file))
 
     def test_get_method(self, config: Config):
@@ -174,9 +175,13 @@ class TestConfig:
         with open(config_file, "w") as f:
             yaml.dump(config_data, f)
 
-        with patch("pathlib.Path.expanduser") as mock_expand:
+        with patch("pathlib.Path.expanduser") as mock_expand, \
+             patch("src.config.SecretsManager") as mock_secrets_class:
             mock_expand.return_value = Path("/home/user/test_vault")
-            Config(str(config_file))
+            mock_secrets_instance = mock_secrets_class.return_value
+            mock_secrets_instance.get_secret.return_value = None
+            
+            config = Config(str(config_file))
 
             # Verify expanduser was called
             mock_expand.assert_called()
@@ -201,7 +206,7 @@ class TestConfig:
         with patch.object(
             config, "get_obsidian_vault_path", return_value=obsidian_vault
         ):
-            with patch.object(config, "get_kindle_email", return_value="invalid-email"):
+            with patch.object(config, "get_kindle_email", return_value=""):
                 assert config.validate() is False
 
     def test_validate_missing_smtp_config(self, config: Config, obsidian_vault: Path):

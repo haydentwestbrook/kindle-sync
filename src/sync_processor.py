@@ -9,6 +9,8 @@ from .config import Config
 from .file_watcher import ObsidianFileWatcher
 from .kindle_sync import KindleSync
 from .pdf_converter import MarkdownToPDFConverter, PDFToMarkdownConverter
+from .core.exceptions import FileProcessingError, EmailServiceError, ErrorSeverity
+from .core.error_handler import ErrorHandler
 
 
 class SyncProcessor:
@@ -21,6 +23,7 @@ class SyncProcessor:
         self.markdown_to_pdf = MarkdownToPDFConverter(config)
         self.pdf_to_markdown = PDFToMarkdownConverter(config)
         self.kindle_sync = KindleSync(config)
+        self.error_handler = ErrorHandler()
 
         # Statistics
         self.stats = {
@@ -75,9 +78,21 @@ class SyncProcessor:
 
             self.stats["files_processed"] += 1
 
+        except (FileProcessingError, EmailServiceError) as e:
+            # Use error handler for structured error handling
+            handled = self.error_handler.handle_error(e, {"file_path": str(file_path)})
+            if not handled:
+                self.stats["errors"] += 1
         except Exception as e:
-            logger.error(f"Error processing file {file_path}: {e}")
-            self.stats["errors"] += 1
+            # Convert generic exceptions to structured errors
+            error = FileProcessingError(
+                f"Unexpected error processing file: {e}",
+                file_path=str(file_path),
+                severity=ErrorSeverity.MEDIUM
+            )
+            handled = self.error_handler.handle_error(error, {"file_path": str(file_path)})
+            if not handled:
+                self.stats["errors"] += 1
 
     def _process_markdown_file(self, markdown_path: Path):
         """Process a Markdown file."""

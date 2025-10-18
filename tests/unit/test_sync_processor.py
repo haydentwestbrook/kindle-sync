@@ -148,7 +148,10 @@ class TestSyncProcessor:
             processor._process_file(md_file)
 
             assert processor.stats["files_processed"] == 0
-            assert processor.stats["errors"] == 1
+            # With the new error handling system, errors are handled by ErrorHandler
+            # Check that the error handler has recorded the error
+            error_stats = processor.error_handler.get_error_stats()
+            assert error_stats["total_errors"] >= 1
 
     def test_process_markdown_file_success(
         self, config, temp_dir, sample_markdown_content

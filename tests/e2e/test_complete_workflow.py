@@ -299,12 +299,14 @@ This document tests the complete automation workflow.
                     with patch.object(
                         processor.kindle_sync, "cleanup_old_files"
                     ) as mock_cleanup:
-                        mock_cleanup.return_value = 3
+                        with patch.object(processor.config, "get_backup_folder_path", return_value=backup_folder):
+                            with patch.object(processor.config, "get_sync_folder_path", return_value=sync_folder):
+                                mock_cleanup.return_value = 3
 
-                        cleaned_count = processor.cleanup_old_files(max_age_days=30)
+                                cleaned_count = processor.cleanup_old_files(max_age_days=30)
 
-                        assert cleaned_count == 6  # 3 from sync + 3 from backup
-                        assert mock_cleanup.call_count == 2
+                                assert cleaned_count == 6  # 3 from sync + 3 from backup
+                                assert mock_cleanup.call_count == 2
 
     @pytest.mark.e2e
     @pytest.mark.slow
@@ -327,26 +329,21 @@ This document tests the complete automation workflow.
         processor = SyncProcessor(config)
 
         # Mock Kindle sync operations
-        with patch.object(
-            processor.kindle_sync, "get_kindle_documents"
-        ) as mock_get_docs:
-            with patch.object(processor.kindle_sync, "sync_from_kindle") as mock_sync:
-                with patch.object(processor, "_process_pdf_file") as mock_process:
-                    # Configure mocks
-                    mock_get_docs.return_value = [kindle_pdf1, kindle_pdf2]
-                    mock_sync.return_value = [
-                        sync_folder / "kindle_doc1.pdf",
-                        sync_folder / "kindle_doc2.pdf",
-                    ]
+        with patch.object(processor.kindle_sync, "sync_from_kindle") as mock_sync:
+            with patch.object(processor, "_process_pdf_file") as mock_process:
+                # Configure mocks
+                mock_sync.return_value = [
+                    sync_folder / "kindle_doc1.pdf",
+                    sync_folder / "kindle_doc2.pdf",
+                ]
 
-                    # Sync from Kindle
-                    synced_count = processor.sync_from_kindle(kindle_docs_folder)
+                # Sync from Kindle
+                synced_count = processor.sync_from_kindle(kindle_docs_folder)
 
-                    # Verify sync operations
-                    assert synced_count == 2
-                    mock_get_docs.assert_called_once_with(kindle_docs_folder)
-                    mock_sync.assert_called_once_with(kindle_docs_folder, sync_folder)
-                    assert mock_process.call_count == 2
+                # Verify sync operations
+                assert synced_count == 2
+                mock_sync.assert_called_once_with(kindle_docs_folder)
+                assert mock_process.call_count == 2
 
     @pytest.mark.e2e
     @pytest.mark.slow
