@@ -11,9 +11,9 @@ import pytest
 from pathlib import Path
 from sqlalchemy.exc import SQLAlchemyError
 
-from src.core.exceptions import DatabaseError, ErrorSeverity
+from src.core.exceptions import KindleSyncError, ErrorSeverity
 from src.database.manager import DatabaseManager
-from src.database.models import FileOperation, Metric, ProcessedFile
+from src.database.models import FileOperation, ProcessedFile, SystemSystemMetricss
 
 
 class TestDatabaseManager:
@@ -50,7 +50,7 @@ class TestDatabaseManager:
             # Try to query each table to verify they exist
             session.query(ProcessedFile).first()
             session.query(FileOperation).first()
-            session.query(Metric).first()
+            session.query(SystemMetrics).first()
 
     def test_database_initialization_with_nonexistent_directory(self):
         """Test database initialization with non-existent directory."""
@@ -68,7 +68,7 @@ class TestDatabaseManager:
         with patch("src.database.manager.create_engine") as mock_engine:
             mock_engine.side_effect = SQLAlchemyError("Connection failed")
 
-            with pytest.raises(DatabaseError) as exc_info:
+            with pytest.raises(KindleSyncError) as exc_info:
                 DatabaseManager(Path("/tmp/test.db"))
 
             assert exc_info.value.severity == ErrorSeverity.CRITICAL
@@ -89,7 +89,7 @@ class TestDatabaseManager:
         db_manager = DatabaseManager(Path("/tmp/test.db"))
         db_manager.Session = None  # Simulate uninitialized state
 
-        with pytest.raises(DatabaseError) as exc_info:
+        with pytest.raises(KindleSyncError) as exc_info:
             db_manager.get_session()
 
         assert exc_info.value.severity == ErrorSeverity.CRITICAL
@@ -150,7 +150,7 @@ class TestDatabaseManager:
             mock_session.add.side_effect = SQLAlchemyError("Database error")
             mock_get_session.return_value.__enter__.return_value = mock_session
 
-            with pytest.raises(DatabaseError) as exc_info:
+            with pytest.raises(KindleSyncError) as exc_info:
                 db_manager.add_processed_file(
                     file_path=Path("/test/document.md"),
                     file_hash="test_hash",
@@ -251,7 +251,7 @@ class TestDatabaseManager:
             mock_session.add.side_effect = SQLAlchemyError("Database error")
             mock_get_session.return_value.__enter__.return_value = mock_session
 
-            with pytest.raises(DatabaseError) as exc_info:
+            with pytest.raises(KindleSyncError) as exc_info:
                 db_manager.add_file_operation(
                     file_id=1, operation_type="test_operation", status="success"
                 )
@@ -269,7 +269,7 @@ class TestDatabaseManager:
 
         # Verify the metric was added
         with db_manager.get_session() as session:
-            metric = session.query(Metric).first()
+            metric = session.query(SystemMetrics).first()
             assert metric is not None
             assert metric.name == "files_processed_total"
             assert metric.value == 42.0
@@ -281,7 +281,7 @@ class TestDatabaseManager:
 
         # Verify the metric was added
         with db_manager.get_session() as session:
-            metric = session.query(Metric).first()
+            metric = session.query(SystemMetrics).first()
             assert metric is not None
             assert metric.name == "system_uptime_seconds"
             assert metric.value == 3600.0
@@ -295,7 +295,7 @@ class TestDatabaseManager:
             mock_session.add.side_effect = SQLAlchemyError("Database error")
             mock_get_session.return_value.__enter__.return_value = mock_session
 
-            with pytest.raises(DatabaseError) as exc_info:
+            with pytest.raises(KindleSyncError) as exc_info:
                 db_manager.add_metric(name="test_metric", value=1.0)
 
             assert "Failed to add metric" in str(exc_info.value)
