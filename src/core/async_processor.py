@@ -12,9 +12,11 @@ from loguru import logger
 from ..config import Config
 try:
     from ..database import DatabaseManager
+    from ..database.models import ProcessingStatus
     DATABASE_AVAILABLE = True
 except ImportError:
     DatabaseManager = None
+    ProcessingStatus = None
     DATABASE_AVAILABLE = False
 from ..core.exceptions import FileProcessingError, ErrorSeverity
 from ..core.retry import retry_on_file_error
