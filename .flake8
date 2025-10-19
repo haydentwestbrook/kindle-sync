@@ -1,0 +1,35 @@
+[flake8]
+max-line-length = 88
+extend-ignore =
+    E203,
+    W503,
+    E501,
+    W504,
+    C901,
+    B008,
+    B006
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    venv,
+    .eggs,
+    *.egg,
+    build,
+    dist,
+    .pytest_cache,
+    .mypy_cache,
+    .coverage,
+    htmlcov,
+    .tox,
+    .nox,
+    .ruff_cache,
+    bandit-report.json
+per-file-ignores =
+    __init__.py:F401
+    tests/*:S101,S106,S108
+    src/*/tests/*:S101,S106,S108
+max-complexity = 10
+docstring-convention = google
+import-order-style = google
+application-import-names = src

@@ -232,12 +232,35 @@ For detailed testing information, see:
 ## 🚀 Deployment Options
 
 ### Option 1: Local Development
+
+**Enhanced Version (Recommended):**
 ```bash
-# Run directly
+# Run enhanced version with all Phase 4 features
 python3 main_enhanced.py
 
 # Run with specific config
 python3 main_enhanced.py --config /path/to/config.yaml
+
+# Run health check
+python3 main_enhanced.py --health-check
+
+# Show metrics
+python3 main_enhanced.py --metrics
+```
+
+**Traditional Version:**
+```bash
+# Run traditional sync version
+python3 main.py start
+
+# Run with async features and database
+python3 main.py start --async
+
+# Run specific commands
+python3 main.py sync-from-kindle
+python3 main.py cleanup
+python3 main.py stats
+python3 main.py validate
 ```
 
 ### Option 2: Docker Deployment
@@ -283,7 +306,27 @@ For detailed deployment guides, see:
 sudo nano /etc/systemd/system/kindle-sync.service
 ```
 
-**Service file content:**
+**Service file content (Enhanced Version):**
+```ini
+[Unit]
+Description=Kindle Scribe Obsidian Sync Service (Enhanced)
+After=network.target
+
+[Service]
+User=your-username
+Group=your-group
+WorkingDirectory=/path/to/kindle-sync
+ExecStart=/path/to/kindle-sync/venv/bin/python /path/to/kindle-sync/main_enhanced.py
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**Service file content (Traditional Version):**
 ```ini
 [Unit]
 Description=Kindle Scribe Obsidian Sync Service
@@ -293,7 +336,27 @@ After=network.target
 User=your-username
 Group=your-group
 WorkingDirectory=/path/to/kindle-sync
-ExecStart=/path/to/kindle-sync/venv/bin/python /path/to/kindle-sync/main_enhanced.py
+ExecStart=/path/to/kindle-sync/venv/bin/python /path/to/kindle-sync/main.py start
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+```
+
+**Service file content (Async Version with Database):**
+```ini
+[Unit]
+Description=Kindle Scribe Obsidian Sync Service (Async)
+After=network.target
+
+[Service]
+User=your-username
+Group=your-group
+WorkingDirectory=/path/to/kindle-sync
+ExecStart=/path/to/kindle-sync/venv/bin/python /path/to/kindle-sync/main.py start --async
 Restart=always
 RestartSec=10
 StandardOutput=journal

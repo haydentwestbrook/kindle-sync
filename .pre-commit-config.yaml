@@ -9,12 +9,22 @@ repos:
       - id: check-merge-conflict
       - id: debug-statements
       - id: check-docstring-first
+      - id: check-json
+      - id: check-toml
+      - id: check-ast
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: check-executables-have-shebangs
+      - id: check-shebang-scripts-are-executable
+      - id: mixed-line-ending
+      - id: pretty-format-json
+        args: ['--autofix']
 
   - repo: https://github.com/psf/black
     rev: 23.12.1
     hooks:
       - id: black
-        language_version: python3.11
+        args: [--line-length=88, --target-version=py312]
 
   - repo: https://github.com/pycqa/isort
     rev: 5.13.2
@@ -26,20 +36,21 @@ repos:
     rev: 7.0.0
     hooks:
       - id: flake8
-        args: [--max-line-length=88, --extend-ignore=E203, W503]
+        args: [--max-line-length=88, --extend-ignore=E203,W503,E501,W504]
+        additional_dependencies: [flake8-docstrings, flake8-bugbear]
 
   - repo: https://github.com/pre-commit/mirrors-mypy
     rev: v1.8.0
     hooks:
       - id: mypy
-        additional_dependencies: [types-PyYAML, types-requests]
-        args: [--ignore-missing-imports]
+        additional_dependencies: [types-PyYAML, types-requests, types-click]
+        args: [--ignore-missing-imports, --show-error-codes, --strict]
 
   - repo: https://github.com/PyCQA/bandit
     rev: 1.7.5
     hooks:
       - id: bandit
-        args: [-r, src/, -f, json, -o, bandit-report.json]
+        args: [-r, src/, -f, json, -o, bandit-report.json, --skip=B101,B601]
         exclude: tests/
 
   - repo: https://github.com/Yelp/detect-secrets
@@ -47,3 +58,34 @@ repos:
     hooks:
       - id: detect-secrets
         args: ['--baseline', '.secrets.baseline']
+
+  - repo: https://github.com/pycqa/pylint
+    rev: v3.0.3
+    hooks:
+      - id: pylint
+        args: [--disable=C0114,C0116,R0903,R0913,W0613]
+        exclude: tests/
+
+  - repo: local
+    hooks:
+      - id: pytest
+        name: pytest
+        entry: pytest
+        language: system
+        args: [--maxfail=1, --tb=short]
+        files: ^tests/
+        pass_filenames: false
+        always_run: false
+
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v3.15.0
+    hooks:
+      - id: pyupgrade
+        args: [--py312-plus]
+
+  - repo: https://github.com/charliermarsh/ruff-pre-commit
+    rev: v0.1.6
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        additional_dependencies: [ruff==0.1.6]

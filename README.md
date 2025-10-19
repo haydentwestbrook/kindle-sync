@@ -4,9 +4,9 @@ An automated system for syncing documents between your Kindle Scribe and Obsidia
 
 ## 📚 Documentation
 
-**📖 [Comprehensive Tutorial](docs/COMPREHENSIVE_TUTORIAL.md)** - Complete guide from setup to production  
-**📋 [Documentation Index](docs/README.md)** - All documentation organized by topic  
-**⚙️ [Configuration Guide](docs/CONFIGURATION_GUIDE.md)** - Detailed configuration options  
+**📖 [Comprehensive Tutorial](docs/COMPREHENSIVE_TUTORIAL.md)** - Complete guide from setup to production
+**📋 [Documentation Index](docs/README.md)** - All documentation organized by topic
+**⚙️ [Configuration Guide](docs/CONFIGURATION_GUIDE.md)** - Detailed configuration options
 **🚀 [Deployment Guide](docs/DEPLOYMENT_GUIDE.md)** - Deployment strategies and options
 
 ## 🚀 Quick Start
@@ -26,19 +26,30 @@ An automated system for syncing documents between your Kindle Scribe and Obsidia
    nano config.yaml  # Edit with your settings
    ```
 
-3. **Test:**
+3. **Set up pre-commit hooks (recommended):**
+   ```bash
+   ./scripts/setup-precommit.sh
+   ```
+
+4. **Test:**
    ```bash
    python3 test_app.py
    ```
 
-4. **Deploy:**
+5. **Deploy:**
    ```bash
-   # Local
+   # Local (Enhanced version with all features)
    python3 main_enhanced.py
-   
+
+   # Local (Traditional version)
+   python3 main.py start
+
+   # Local (Async version with database)
+   python3 main.py start --async
+
    # Docker
    docker-compose up -d
-   
+
    # Raspberry Pi
    ./scripts/deploy-to-pi.sh 192.168.1.100
    ```
@@ -126,7 +137,7 @@ An automated system for syncing documents between your Kindle Scribe and Obsidia
    ```bash
    # Linux/macOS
    ./scripts/install.sh
-   
+
    # Windows
    scripts\install.bat
    ```
@@ -177,12 +188,27 @@ An automated system for syncing documents between your Kindle Scribe and Obsidia
 ./scripts/docker-commands.sh status   # Check status
 ```
 
-**Local:**
+**Local (Traditional):**
 ```bash
 python main.py start                  # Start sync system
 python main.py sync-from-kindle       # Sync from Kindle
 python main.py cleanup                # Clean up old files
 python main.py stats                  # View statistics
+python main.py validate               # Validate configuration
+python main.py monitor                # Start monitoring server only
+```
+
+**Local (Enhanced):**
+```bash
+python main_enhanced.py               # Start enhanced version
+python main_enhanced.py --health-check # Run health check
+python main_enhanced.py --metrics     # Show metrics
+```
+
+**Local (Async with Database):**
+```bash
+python main.py start --async          # Start async version with database
+python main.py monitor                # Start monitoring server
 ```
 
 ## Configuration
@@ -205,9 +231,13 @@ See `config.yaml` for detailed configuration options including:
 
 ## Documentation
 
-- **[Docker Deployment Guide](docs/DOCKER.md)** - Complete Docker setup and management
-- **[Setup Guide](docs/SETUP.md)** - Detailed installation instructions
-- **[Usage Guide](docs/USAGE.md)** - Comprehensive usage instructions
+- **[📚 Documentation Index](docs/README.md)** - All documentation organized by topic
+- **[📖 Comprehensive Tutorial](docs/COMPREHENSIVE_TUTORIAL.md)** - Complete guide from setup to production
+- **[⚙️ Configuration Guide](docs/CONFIGURATION_GUIDE.md)** - Detailed configuration options
+- **[🚀 Deployment Guide](docs/DEPLOYMENT_GUIDE.md)** - Deployment strategies and options
+- **[🐳 Docker Guide](docs/DOCKER.md)** - Complete Docker setup and management
+- **[🍓 Raspberry Pi Deployment](docs/RASPBERRY_PI_DEPLOYMENT.md)** - Pi-specific setup and optimization
+- **[🔧 Pre-commit Setup](docs/PRE_COMMIT_SETUP.md)** - Code quality and linting setup
 
 ## License
 

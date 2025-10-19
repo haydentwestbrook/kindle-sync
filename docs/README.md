@@ -19,14 +19,12 @@ Welcome to the comprehensive documentation for the Kindle Scribe ↔ Obsidian Sy
 ### 🐳 Deployment Options
 - [🐳 Docker Guide](DOCKER.md) - Containerized deployment with Docker
 - [🍓 Raspberry Pi Deployment](RASPBERRY_PI_DEPLOYMENT.md) - Pi-specific setup and optimization
-- [📋 Manual Deployment](MANUAL_DEPLOYMENT.md) - Step-by-step manual deployment
-- [✅ Deployment Success](DEPLOYMENT_SUCCESS.md) - Successful deployment example and next steps
 
 ### 🧪 Testing & Quality
 - [🧪 Testing Guide](TESTING.md) - Testing procedures and best practices
 - [📋 Testing Plan](TESTING_PLAN.md) - Comprehensive testing checklist
 - [📊 Test Results](TEST_RESULTS.md) - Test execution results and analysis
-- [🔧 Local Testing Plan](LOCAL_TESTING_PLAN.md) - Local testing strategy
+- [🔧 Pre-commit Setup](PRE_COMMIT_SETUP.md) - Code quality and linting setup
 
 ### 🏗️ Architecture & Implementation
 - [🏗️ Design Improvements](DESIGN_IMPROVEMENTS.md) - System architecture and design decisions
@@ -34,7 +32,6 @@ Welcome to the comprehensive documentation for the Kindle Scribe ↔ Obsidian Sy
 - [📚 Operational Runbooks](OPERATIONAL_RUNBOOKS.md) - Operations procedures and troubleshooting
 
 ### 🔧 Troubleshooting & Support
-- [🔧 Push Instructions](PUSH_INSTRUCTIONS.md) - Git push troubleshooting and solutions
 - [📋 Testing Plan](TESTING_PLAN.md) - Testing procedures and validation
 - [📊 Test Results](TEST_RESULTS.md) - Test results and known issues
 
@@ -50,32 +47,29 @@ Welcome to the comprehensive documentation for the Kindle Scribe ↔ Obsidian Sy
 1. **Architecture:** [Design Improvements](DESIGN_IMPROVEMENTS.md)
 2. **Implementation:** [Implementation Summary](IMPLEMENTATION_SUMMARY.md)
 3. **Testing:** [Testing Guide](TESTING.md) and [Testing Plan](TESTING_PLAN.md)
-4. **Deployment:** [Docker Guide](DOCKER.md) or [Manual Deployment](MANUAL_DEPLOYMENT.md)
+4. **Deployment:** [Docker Guide](DOCKER.md) or [Raspberry Pi Deployment](RASPBERRY_PI_DEPLOYMENT.md)
 
 ### 🏭 For Operations Teams
 1. **Deployment:** [Deployment Guide](DEPLOYMENT_GUIDE.md)
 2. **Operations:** [Operational Runbooks](OPERATIONAL_RUNBOOKS.md)
-3. **Monitoring:** [Deployment Success](DEPLOYMENT_SUCCESS.md)
-4. **Troubleshooting:** [Test Results](TEST_RESULTS.md) and [Push Instructions](PUSH_INSTRUCTIONS.md)
+3. **Troubleshooting:** [Test Results](TEST_RESULTS.md)
 
 ## 📊 Documentation Status
 
 | Document | Status | Last Updated | Description |
 |----------|--------|--------------|-------------|
-| [Comprehensive Tutorial](COMPREHENSIVE_TUTORIAL.md) | ✅ Complete | Oct 19, 2025 | Complete tutorial covering all aspects |
-| [Configuration Guide](CONFIGURATION_GUIDE.md) | ✅ Complete | Oct 10, 2025 | Detailed configuration options |
-| [Deployment Guide](DEPLOYMENT_GUIDE.md) | ✅ Complete | Oct 10, 2025 | Deployment strategies and options |
-| [Docker Guide](DOCKER.md) | ✅ Complete | Oct 10, 2025 | Containerized deployment |
-| [Raspberry Pi Deployment](RASPBERRY_PI_DEPLOYMENT.md) | ✅ Complete | Oct 10, 2025 | Pi-specific setup |
-| [Testing Guide](TESTING.md) | ✅ Complete | Oct 10, 2025 | Testing procedures |
-| [Design Improvements](DESIGN_IMPROVEMENTS.md) | ✅ Complete | Oct 18, 2025 | System architecture |
-| [Implementation Summary](IMPLEMENTATION_SUMMARY.md) | ✅ Complete | Oct 19, 2025 | Implementation details |
-| [Operational Runbooks](OPERATIONAL_RUNBOOKS.md) | ✅ Complete | Oct 19, 2025 | Operations procedures |
-| [Deployment Success](DEPLOYMENT_SUCCESS.md) | ✅ Complete | Oct 19, 2025 | Successful deployment example |
-| [Testing Plan](TESTING_PLAN.md) | ✅ Complete | Oct 19, 2025 | Testing checklist |
-| [Test Results](TEST_RESULTS.md) | ✅ Complete | Oct 19, 2025 | Test execution results |
-| [Local Testing Plan](LOCAL_TESTING_PLAN.md) | ✅ Complete | Oct 19, 2025 | Local testing strategy |
-| [Push Instructions](PUSH_INSTRUCTIONS.md) | ✅ Complete | Oct 19, 2025 | Git push troubleshooting |
+| [Comprehensive Tutorial](COMPREHENSIVE_TUTORIAL.md) | ✅ Complete | Updated | Complete tutorial covering all aspects |
+| [Configuration Guide](CONFIGURATION_GUIDE.md) | ✅ Complete | Updated | Detailed configuration options |
+| [Deployment Guide](DEPLOYMENT_GUIDE.md) | ✅ Complete | Updated | Deployment strategies and options |
+| [Docker Guide](DOCKER.md) | ✅ Complete | Updated | Containerized deployment |
+| [Raspberry Pi Deployment](RASPBERRY_PI_DEPLOYMENT.md) | ✅ Complete | Updated | Pi-specific setup |
+| [Testing Guide](TESTING.md) | ✅ Complete | Updated | Testing procedures |
+| [Design Improvements](DESIGN_IMPROVEMENTS.md) | ✅ Complete | Updated | System architecture |
+| [Implementation Summary](IMPLEMENTATION_SUMMARY.md) | ✅ Complete | Updated | Implementation details |
+| [Operational Runbooks](OPERATIONAL_RUNBOOKS.md) | ✅ Complete | Updated | Operations procedures |
+| [Testing Plan](TESTING_PLAN.md) | ✅ Complete | Updated | Testing checklist |
+| [Test Results](TEST_RESULTS.md) | ✅ Complete | Updated | Test execution results |
+| [Pre-commit Setup](PRE_COMMIT_SETUP.md) | ✅ Complete | Updated | Code quality and linting setup |
 
 ## 🔍 Quick Reference
 
@@ -101,20 +95,29 @@ docker-compose up -d
 # or
 ./scripts/deploy-to-pi.sh 192.168.1.100
 
-# Running
+# Running (Enhanced version - recommended)
 python3 main_enhanced.py
+
+# Running (Traditional version)
+python3 main.py start
+
+# Running (Async version with database)
+python3 main.py start --async
 ```
 
 ### Key Files
 - `config.yaml` - Main configuration file
-- `main_enhanced.py` - Application entry point
+- `main.py` - Traditional application entry point with CLI commands
+- `main_enhanced.py` - Enhanced application with Phase 4 features
+- `src/async_main.py` - Async application with database integration
 - `requirements.txt` - Python dependencies
 - `docker-compose.yml` - Docker deployment
 - `scripts/` - Deployment and utility scripts
 
 ### Important URLs
-- **Health Check:** `http://localhost:8000/health`
-- **Metrics:** `http://localhost:8000/metrics`
+- **Health Check:** `http://localhost:8080/health`
+- **Metrics:** `http://localhost:8080/metrics`
+- **Status:** `http://localhost:8080/status`
 - **GitHub Repository:** https://github.com/haydentwestbrook/kindle-sync
 
 ## 🆘 Getting Help

@@ -1,7 +1,7 @@
 """Configuration management for the Kindle Scribe sync system."""
 
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import yaml
 from loguru import logger
@@ -63,10 +63,10 @@ class KindleConfig(BaseModel):
     """Kindle configuration schema."""
 
     email: str = Field(..., description="Kindle email address")
-    approved_senders: List[str] = Field(
+    approved_senders: list[str] = Field(
         default_factory=list, description="Approved email senders"
     )
-    usb_path: Optional[Path] = Field(default=None, description="USB mount path")
+    usb_path: Path | None = Field(default=None, description="USB mount path")
 
     @validator("email")
     def validate_email(cls, v):
@@ -139,7 +139,7 @@ class KindleSyncConfig(BaseModel):
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
 
     # Advanced settings
-    advanced: Dict[str, Any] = Field(default_factory=dict)
+    advanced: dict[str, Any] = Field(default_factory=dict)
 
 
 class Config:
@@ -153,7 +153,7 @@ class Config:
         self._secrets_manager = SecretsManager(config=self._raw_config)
         self._config = self._validate_and_parse_config()
 
-    def _load_config(self) -> Dict[str, Any]:
+    def _load_config(self) -> dict[str, Any]:
         """Load configuration from YAML file."""
         if not self.config_path.exists():
             raise ConfigurationError(
@@ -163,7 +163,7 @@ class Config:
             )
 
         try:
-            with open(self.config_path, "r", encoding="utf-8") as f:
+            with open(self.config_path, encoding="utf-8") as f:
                 config = yaml.safe_load(f)
             logger.info(f"Configuration loaded from {self.config_path}")
             return config or {}
@@ -267,7 +267,7 @@ class Config:
                     f"Applied environment override: {env_var} -> {config_path}"
                 )
 
-    def _set_nested_value(self, data: Dict[str, Any], key: str, value: Any) -> None:
+    def _set_nested_value(self, data: dict[str, Any], key: str, value: Any) -> None:
         """Set nested value using dot notation."""
         keys = key.split(".")
         config = data
@@ -289,7 +289,7 @@ class Config:
         except (KeyError, TypeError):
             return default
 
-    def _get_nested_value(self, data: Dict[str, Any], key: str) -> Any:
+    def _get_nested_value(self, data: dict[str, Any], key: str) -> Any:
         """Get nested value using dot notation."""
         keys = key.split(".")
         value = data
@@ -329,11 +329,11 @@ class Config:
         """Get the Kindle email address."""
         return self.get("kindle.email", "")
 
-    def get_approved_senders(self) -> List[str]:
+    def get_approved_senders(self) -> list[str]:
         """Get the list of approved email senders."""
         return self.get("kindle.approved_senders", [])
 
-    def get_smtp_config(self) -> Dict[str, Any]:
+    def get_smtp_config(self) -> dict[str, Any]:
         """Get SMTP configuration with secrets management."""
         # Try both config formats for backward compatibility
         server = self.get("kindle.smtp_server") or self.get("smtp.host", "")
@@ -358,7 +358,7 @@ class Config:
         # Fallback to direct config (try both formats)
         return self.get("kindle.smtp_password") or self.get("smtp.password", "")
 
-    def get_sync_config(self) -> Dict[str, Any]:
+    def get_sync_config(self) -> dict[str, Any]:
         """Get sync configuration."""
         return {
             "backup_originals": self.get("sync.backup_originals", True),
@@ -367,7 +367,7 @@ class Config:
             "retry_attempts": self.get("sync.retry_attempts", 3),
         }
 
-    def get_ocr_config(self) -> Dict[str, Any]:
+    def get_ocr_config(self) -> dict[str, Any]:
         """Get OCR configuration."""
         return self.get(
             "processing.ocr",
@@ -377,7 +377,7 @@ class Config:
             },
         )
 
-    def get_imap_config(self) -> Dict[str, Any]:
+    def get_imap_config(self) -> dict[str, Any]:
         """Get IMAP configuration for email receiving."""
         return {
             "server": self.get("email_receiving.imap_server", ""),
@@ -390,7 +390,7 @@ class Config:
             "delete_after": self.get("email_receiving.delete_after_processing", False),
         }
 
-    def get_ocr_config(self) -> Dict[str, Any]:
+    def get_ocr_config(self) -> dict[str, Any]:
         """Get OCR configuration."""
         return self.get(
             "processing.ocr",
@@ -400,7 +400,7 @@ class Config:
             },
         )
 
-    def get_pdf_config(self) -> Dict[str, Any]:
+    def get_pdf_config(self) -> dict[str, Any]:
         """Get PDF generation configuration."""
         return self.get(
             "processing.pdf",
@@ -413,7 +413,7 @@ class Config:
             },
         )
 
-    def get_markdown_config(self) -> Dict[str, Any]:
+    def get_markdown_config(self) -> dict[str, Any]:
         """Get Markdown processing configuration."""
         return self.get(
             "processing.markdown",
@@ -423,19 +423,19 @@ class Config:
             },
         )
 
-    def get_sync_config(self) -> Dict[str, Any]:
+    def get_sync_config(self) -> dict[str, Any]:
         """Get sync configuration."""
         return self.get("sync", {})
 
-    def get_patterns(self) -> Dict[str, str]:
+    def get_patterns(self) -> dict[str, str]:
         """Get file patterns."""
         return self.get("patterns", {})
 
-    def get_logging_config(self) -> Dict[str, Any]:
+    def get_logging_config(self) -> dict[str, Any]:
         """Get logging configuration."""
         return self.get("logging", {})
 
-    def get_advanced_config(self) -> Dict[str, Any]:
+    def get_advanced_config(self) -> dict[str, Any]:
         """Get advanced configuration."""
         return self.get("advanced", {})
 
