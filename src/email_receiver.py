@@ -721,7 +721,22 @@ class EmailReceiver:
 
     def _is_duplicate_email(self, email_id):
         """Check if email has already been processed."""
-        return self._is_email_processed(email_id)
+        if not self.prevent_duplicates:
+            return False
+        
+        try:
+            tracking_file_path = self.config.get(
+                "email_receiving.duplicate_tracking_file"
+            )
+            if tracking_file_path and Path(tracking_file_path).exists():
+                with open(tracking_file_path, "r") as f:
+                    for line in f:
+                        if line.strip() == email_id:
+                            return True
+        except Exception as e:
+            logger.error(f"Error checking duplicate email: {e}")
+        
+        return False
 
     def _record_processed_email(self, email_id):
         """Record email as processed."""
