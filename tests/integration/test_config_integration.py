@@ -83,10 +83,9 @@ class TestConfigIntegration:
         with open(config_file, "w") as f:
             yaml.dump(config_data, f)
 
-        config = Config(str(config_file))
-
-        # Validation should fail
-        assert config.validate() is False
+        # Validation should fail during initialization
+        with pytest.raises(ConfigurationError):
+            Config(str(config_file))
 
     def test_config_with_invalid_email(self, temp_dir):
         """Test Config validation with invalid email."""
@@ -108,10 +107,9 @@ class TestConfigIntegration:
         with open(config_file, "w") as f:
             yaml.dump(config_data, f)
 
-        config = Config(str(config_file))
-
-        # Validation should pass (email format validation is not implemented)
-        assert config.validate() is True
+        # Validation should fail during initialization due to invalid email
+        with pytest.raises(ConfigurationError):
+            Config(str(config_file))
 
     def test_config_with_missing_smtp_config(self, temp_dir):
         """Test Config validation with missing SMTP configuration."""
