@@ -94,7 +94,7 @@ jobs:
     if: always() && (needs.test.result == 'success' || github.event.inputs.skip_tests == 'true')
     runs-on: ubuntu-latest
     name: Deploy to Raspberry Pi
-    environment: ${{ env.DEPLOYMENT_ENV }}
+    environment: ${{ github.event.inputs.environment || 'production' }}
 
     steps:
       - name: Checkout code
@@ -254,7 +254,7 @@ jobs:
           echo "Pi IP: ${{ env.PI_IP }}"
           echo "User: ${{ env.PI_USER }}"
           echo "Directory: ${{ env.PI_DIR }}"
-          echo "Environment: ${{ env.DEPLOYMENT_ENV }}"
+          echo "Environment: ${{ github.event.inputs.environment || 'production' }}"
           echo ""
           echo "Next steps:"
           echo "1. SSH into your Pi: ssh ${{ env.PI_USER }}@${{ env.PI_IP }}"
