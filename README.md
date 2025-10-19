@@ -2,6 +2,49 @@
 
 An automated system for syncing documents between your Kindle Scribe and Obsidian vault, enabling a seamless writing and annotation workflow.
 
+## 📚 Documentation
+
+**📖 [Comprehensive Tutorial](docs/COMPREHENSIVE_TUTORIAL.md)** - Complete guide from setup to production  
+**📋 [Documentation Index](docs/README.md)** - All documentation organized by topic  
+**⚙️ [Configuration Guide](docs/CONFIGURATION_GUIDE.md)** - Detailed configuration options  
+**🚀 [Deployment Guide](docs/DEPLOYMENT_GUIDE.md)** - Deployment strategies and options
+
+## 🚀 Quick Start
+
+1. **Clone and setup:**
+   ```bash
+   git clone https://github.com/haydentwestbrook/kindle-sync.git
+   cd kindle-sync
+   python3 -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+   ```
+
+2. **Configure:**
+   ```bash
+   cp config.yaml.example config.yaml
+   nano config.yaml  # Edit with your settings
+   ```
+
+3. **Test:**
+   ```bash
+   python3 test_app.py
+   ```
+
+4. **Deploy:**
+   ```bash
+   # Local
+   python3 main_enhanced.py
+   
+   # Docker
+   docker-compose up -d
+   
+   # Raspberry Pi
+   ./scripts/deploy-to-pi.sh 192.168.1.100
+   ```
+
+**For detailed instructions, see the [Comprehensive Tutorial](docs/COMPREHENSIVE_TUTORIAL.md).**
+
 ## Workflow Overview
 
 1. **Write on Kindle Scribe** → Export as PDF
