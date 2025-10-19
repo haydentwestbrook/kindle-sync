@@ -1,0 +1,104 @@
+name: Manage Kindle Sync Service
+
+on:
+  workflow_dispatch:
+    inputs:
+      pi_ip:
+        description: 'Raspberry Pi IP Address'
+        required: true
+        default: '192.168.0.12'
+      pi_user:
+        description: 'SSH Username'
+        required: true
+        default: 'hayden'
+      action:
+        description: 'Service Action'
+        required: true
+        type: choice
+        options:
+        - status
+        - start
+        - stop
+        - restart
+        - logs
+        - update-config
+        default: 'status'
+
+env:
+  PI_IP: ${{ github.event.inputs.pi_ip }}
+  PI_USER: ${{ github.event.inputs.pi_user }}
+  PI_DIR: '/home/hayden/kindle-sync'
+
+jobs:
+  manage-service:
+    runs-on: ubuntu-latest
+    name: Manage Service
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PI_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ env.PI_IP }} >> ~/.ssh/known_hosts
+
+      - name: Test SSH connection
+        run: |
+          ssh -i ~/.ssh/id_rsa -o ConnectTimeout=10 ${{ env.PI_USER }}@${{ env.PI_IP }} "echo 'SSH connection successful'"
+
+      - name: Check service status
+        if: ${{ github.event.inputs.action == 'status' }}
+        run: |
+          echo "📊 Service Status:"
+          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+            sudo systemctl status kindle-sync.service --no-pager
+          "
+
+      - name: Start service
+        if: ${{ github.event.inputs.action == 'start' }}
+        run: |
+          echo "🚀 Starting service..."
+          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+            sudo systemctl start kindle-sync.service &&
+            sudo systemctl status kindle-sync.service --no-pager
+          "
+
+      - name: Stop service
+        if: ${{ github.event.inputs.action == 'stop' }}
+        run: |
+          echo "🛑 Stopping service..."
+          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+            sudo systemctl stop kindle-sync.service &&
+            sudo systemctl status kindle-sync.service --no-pager
+          "
+
+      - name: Restart service
+        if: ${{ github.event.inputs.action == 'restart' }}
+        run: |
+          echo "🔄 Restarting service..."
+          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+            sudo systemctl restart kindle-sync.service &&
+            sudo systemctl status kindle-sync.service --no-pager
+          "
+
+      - name: Show service logs
+        if: ${{ github.event.inputs.action == 'logs' }}
+        run: |
+          echo "📋 Service Logs (last 50 lines):"
+          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+            sudo journalctl -u kindle-sync.service --no-pager -n 50
+          "
+
+      - name: Update configuration
+        if: ${{ github.event.inputs.action == 'update-config' }}
+        run: |
+          echo "⚙️ Updating configuration..."
+          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+            cd ${{ env.PI_DIR }} &&
+            git pull &&
+            sudo systemctl restart kindle-sync.service &&
+            echo 'Configuration updated and service restarted'
+          "

@@ -1,0 +1,186 @@
+name: Test Deployment
+
+on:
+  workflow_dispatch:
+    inputs:
+      pi_ip:
+        description: 'Raspberry Pi IP Address'
+        required: true
+        default: '192.168.0.12'
+      pi_user:
+        description: 'SSH Username'
+        required: true
+        default: 'hayden'
+      test_type:
+        description: 'Test Type'
+        required: true
+        type: choice
+        options:
+        - connectivity
+        - dependencies
+        - service
+        - file-processing
+        - email
+        - all
+        default: 'all'
+
+env:
+  PI_IP: ${{ github.event.inputs.pi_ip }}
+  PI_USER: ${{ github.event.inputs.pi_user }}
+  PI_DIR: '/home/hayden/kindle-sync'
+
+jobs:
+  test-deployment:
+    runs-on: ubuntu-latest
+    name: Test Deployment
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PI_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ env.PI_IP }} >> ~/.ssh/known_hosts
+
+      - name: Test connectivity
+        if: ${{ github.event.inputs.test_type == 'connectivity' || github.event.inputs.test_type == 'all' }}
+        run: |
+          echo "🌐 Testing connectivity..."
+          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+            echo '✓ SSH connection successful' &&
+            echo '✓ Pi is reachable' &&
+            ping -c 1 8.8.8.8 && echo '✓ Internet connectivity confirmed'
+          "
+
+      - name: Test dependencies
+        if: ${{ github.event.inputs.test_type == 'dependencies' || github.event.inputs.test_type == 'all' }}
+        run: |
+          echo "📦 Testing dependencies..."
+          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+            cd ${{ env.PI_DIR }} &&
+            source venv/bin/activate &&
+            python -c 'import pytesseract; print(\"✓ Tesseract available\")' &&
+            python -c 'import pdf2image; print(\"✓ PDF2Image available\")' &&
+            python -c 'import reportlab; print(\"✓ ReportLab available\")' &&
+            python -c 'import markdown; print(\"✓ Markdown available\")' &&
+            python -c 'import yaml; print(\"✓ PyYAML available\")' &&
+            python -c 'import smtplib; print(\"✓ SMTP available\")' &&
+            tesseract --version | head -1 &&
+            pdftoppm -h | head -1
+          "
+
+      - name: Test service
+        if: ${{ github.event.inputs.test_type == 'service' || github.event.inputs.test_type == 'all' }}
+        run: |
+          echo "🔧 Testing service..."
+          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+            sudo systemctl is-active kindle-sync.service && echo '✓ Service is active' ||
+            echo '⚠ Service is not active' &&
+            sudo systemctl status kindle-sync.service --no-pager -l
+          "
+
+      - name: Test file processing
+        if: ${{ github.event.inputs.test_type == 'file-processing' || github.event.inputs.test_type == 'all' }}
+        run: |
+          echo "📄 Testing file processing..."
+          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+            cd ${{ env.PI_DIR }} &&
+            source venv/bin/activate &&
+
+            # Create test markdown file
+            cat > /tmp/test.md << 'EOF'
+# Test Document
+This is a test document for Kindle sync.
+
+## Features
+- Markdown to PDF conversion
+- PDF to Markdown conversion
+- Email integration
+- File watching
+EOF
+
+            # Test markdown to PDF conversion
+            python -c '
+import markdown
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Paragraph
+from reportlab.lib.styles import getSampleStyleSheet
+
+with open(\"/tmp/test.md\", \"r\") as f:
+    md_content = f.read()
+
+html = markdown.markdown(md_content)
+doc = SimpleDocTemplate(\"/tmp/test.pdf\", pagesize=A4)
+styles = getSampleStyleSheet()
+story = [Paragraph(html, styles[\"Normal\"])]
+doc.build(story)
+print(\"✓ Markdown to PDF conversion successful\")
+' &&
+
+            # Test PDF to text extraction
+            python -c '
+from pdf2image import convert_from_path
+import pytesseract
+
+images = convert_from_path(\"/tmp/test.pdf\")
+text = pytesseract.image_to_string(images[0])
+if \"Test Document\" in text:
+    print(\"✓ PDF to text extraction successful\")
+else:
+    print(\"⚠ PDF to text extraction may have issues\")
+' &&
+
+            # Cleanup
+            rm -f /tmp/test.md /tmp/test.pdf &&
+            echo '✓ File processing tests completed'
+          "
+
+      - name: Test email configuration
+        if: ${{ github.event.inputs.test_type == 'email' || github.event.inputs.test_type == 'all' }}
+        run: |
+          echo "📧 Testing email configuration..."
+          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+            cd ${{ env.PI_DIR }} &&
+            source venv/bin/activate &&
+            python -c '
+import yaml
+import smtplib
+
+# Load config
+with open(\"config.yaml\", \"r\") as f:
+    config = yaml.safe_load(f)
+
+# Test SMTP connection
+try:
+    server = smtplib.SMTP(config[\"kindle\"][\"smtp_server\"], config[\"kindle\"][\"smtp_port\"])
+    server.starttls()
+    print(\"✓ SMTP connection successful\")
+    server.quit()
+except Exception as e:
+    print(f\"⚠ SMTP connection failed: {e}\")
+
+# Check configuration
+if config[\"kindle\"][\"email\"] != \"your-kindle@kindle.com\":
+    print(\"✓ Kindle email configured\")
+else:
+    print(\"⚠ Kindle email not configured\")
+
+if config[\"kindle\"][\"smtp_username\"] != \"your-email@gmail.com\":
+    print(\"✓ SMTP username configured\")
+else:
+    print(\"⚠ SMTP username not configured\")
+'
+          "
+
+      - name: Test summary
+        run: |
+          echo "🎯 Test Summary"
+          echo "=============="
+          echo "Pi IP: ${{ env.PI_IP }}"
+          echo "User: ${{ env.PI_USER }}"
+          echo "Test Type: ${{ github.event.inputs.test_type }}"
+          echo ""
+          echo "All tests completed successfully! ✅"

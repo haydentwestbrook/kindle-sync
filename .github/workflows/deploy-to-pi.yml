@@ -1,0 +1,277 @@
+name: Deploy to Raspberry Pi
+
+on:
+  workflow_dispatch:
+    inputs:
+      pi_ip:
+        description: 'Raspberry Pi IP Address'
+        required: true
+        default: '192.168.0.12'
+      pi_user:
+        description: 'SSH Username'
+        required: true
+        default: 'hayden'
+      skip_tests:
+        description: 'Skip tests before deployment'
+        required: false
+        default: false
+        type: boolean
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+        - production
+        - staging
+        - development
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/**'
+      - 'requirements.txt'
+      - 'config.yaml.example'
+      - 'scripts/**'
+      - '.github/workflows/deploy-to-pi.yml'
+
+env:
+  PI_IP: ${{ github.event.inputs.pi_ip || '192.168.0.12' }}
+  PI_USER: ${{ github.event.inputs.pi_user || 'hayden' }}
+  PI_DIR: '/home/hayden/kindle-sync'
+  DEPLOYMENT_ENV: ${{ github.event.inputs.environment || 'production' }}
+
+jobs:
+  test:
+    if: ${{ !github.event.inputs.skip_tests }}
+    runs-on: ubuntu-latest
+    name: Run Tests
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Run linting
+        run: |
+          flake8 src/ --count --select=E9,F63,F7,F82 --show-source --statistics
+          black --check src/
+          isort --check-only src/
+
+      - name: Run type checking
+        run: |
+          mypy src/ --ignore-missing-imports
+
+      - name: Run tests
+        run: |
+          pytest tests/ -v --cov=src --cov-report=xml
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+
+  deploy:
+    needs: test
+    if: always() && (needs.test.result == 'success' || github.event.inputs.skip_tests == 'true')
+    runs-on: ubuntu-latest
+    name: Deploy to Raspberry Pi
+    environment: ${{ env.DEPLOYMENT_ENV }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PI_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ env.PI_IP }} >> ~/.ssh/known_hosts
+
+      - name: Test SSH connection
+        run: |
+          ssh -i ~/.ssh/id_rsa -o ConnectTimeout=10 ${{ env.PI_USER }}@${{ env.PI_IP }} "echo 'SSH connection successful'"
+
+      - name: Get system information
+        run: |
+          echo "=== System Information ==="
+          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+            echo 'OS:' && cat /etc/os-release | grep PRETTY_NAME
+            echo 'Python:' && python3 --version
+            echo 'Memory:' && free -h
+            echo 'Disk:' && df -h
+            echo 'Uptime:' && uptime
+          "
+
+      - name: Update system packages
+        run: |
+          echo "🔄 Updating system packages..."
+          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+            sudo apt update && 
+            sudo apt upgrade -y
+          "
+
+      - name: Install system dependencies
+        run: |
+          echo "📦 Installing system dependencies..."
+          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+            sudo apt install -y git tesseract-ocr tesseract-ocr-eng poppler-utils
+          "
+
+      - name: Clone or update repository
+        run: |
+          echo "📁 Setting up repository..."
+          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+            if [ -d '${{ env.PI_DIR }}' ]; then
+              echo 'Repository exists, updating...'
+              cd ${{ env.PI_DIR }} && git pull
+            else
+              echo 'Cloning repository...'
+              git clone https://github.com/haydentwestbrook/kindle-sync.git ${{ env.PI_DIR }}
+            fi
+          "
+
+      - name: Setup Python environment
+        run: |
+          echo "🐍 Setting up Python environment..."
+          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+            cd ${{ env.PI_DIR }} &&
+            python3 -m venv venv &&
+            source venv/bin/activate &&
+            pip install --upgrade pip &&
+            pip install -r requirements.txt
+          "
+
+      - name: Create directory structure
+        run: |
+          echo "📂 Creating directory structure..."
+          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+            mkdir -p ${{ env.PI_DIR }}/logs ${{ env.PI_DIR }}/backups ${{ env.PI_DIR }}/temp &&
+            mkdir -p /home/${{ env.PI_USER }}/obsidian-vault/'Kindle Sync' &&
+            mkdir -p /home/${{ env.PI_USER }}/obsidian-vault/Templates &&
+            mkdir -p /home/${{ env.PI_USER }}/obsidian-vault/Backups
+          "
+
+      - name: Setup configuration
+        run: |
+          echo "⚙️ Setting up configuration..."
+          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+            cd ${{ env.PI_DIR }} &&
+            if [ ! -f 'config.yaml' ]; then
+              cp config.yaml.example config.yaml
+              echo 'Configuration file created from example'
+            else
+              echo 'Configuration file already exists'
+            fi
+          "
+
+      - name: Set permissions
+        run: |
+          echo "🔐 Setting permissions..."
+          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+            sudo chown -R ${{ env.PI_USER }}:${{ env.PI_USER }} ${{ env.PI_DIR }} &&
+            sudo chown -R ${{ env.PI_USER }}:${{ env.PI_USER }} /home/${{ env.PI_USER }}/obsidian-vault &&
+            chmod +x ${{ env.PI_DIR }}/scripts/*.sh &&
+            chmod +x ${{ env.PI_DIR }}/simple_sync.py
+          "
+
+      - name: Test deployment
+        run: |
+          echo "🧪 Testing deployment..."
+          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+            cd ${{ env.PI_DIR }} &&
+            source venv/bin/activate &&
+            python -c 'import pytesseract; print(\"✓ Tesseract available\")' &&
+            python -c 'import pdf2image; print(\"✓ PDF2Image available\")' &&
+            python -c 'import reportlab; print(\"✓ ReportLab available\")' &&
+            python -c 'import simple_sync; print(\"✓ Simple sync script imports successfully\")'
+          "
+
+      - name: Create systemd service
+        run: |
+          echo "🔧 Creating systemd service..."
+          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+            sudo tee /etc/systemd/system/kindle-sync.service > /dev/null << 'EOF'
+          [Unit]
+          Description=Kindle Scribe Sync System
+          After=network.target
+
+          [Service]
+          Type=simple
+          User=${{ env.PI_USER }}
+          WorkingDirectory=${{ env.PI_DIR }}
+          Environment=PATH=${{ env.PI_DIR }}/venv/bin
+          ExecStart=${{ env.PI_DIR }}/venv/bin/python ${{ env.PI_DIR }}/simple_sync.py
+          Restart=always
+          RestartSec=10
+
+          [Install]
+          WantedBy=multi-user.target
+          EOF
+          "
+
+      - name: Enable and start service
+        run: |
+          echo "🚀 Enabling and starting service..."
+          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+            sudo systemctl daemon-reload &&
+            sudo systemctl enable kindle-sync.service &&
+            sudo systemctl start kindle-sync.service
+          "
+
+      - name: Check service status
+        run: |
+          echo "📊 Checking service status..."
+          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+            sudo systemctl status kindle-sync.service --no-pager &&
+            echo 'Service logs (last 10 lines):' &&
+            sudo journalctl -u kindle-sync.service --no-pager -n 10
+          "
+
+      - name: Deployment summary
+        run: |
+          echo "🎉 Deployment completed successfully!"
+          echo "=================================="
+          echo "Pi IP: ${{ env.PI_IP }}"
+          echo "User: ${{ env.PI_USER }}"
+          echo "Directory: ${{ env.PI_DIR }}"
+          echo "Environment: ${{ env.DEPLOYMENT_ENV }}"
+          echo ""
+          echo "Next steps:"
+          echo "1. SSH into your Pi: ssh ${{ env.PI_USER }}@${{ env.PI_IP }}"
+          echo "2. Edit configuration: nano ${{ env.PI_DIR }}/config.yaml"
+          echo "3. Check service status: sudo systemctl status kindle-sync.service"
+          echo "4. View logs: sudo journalctl -u kindle-sync.service -f"
+          echo "5. Test with a sample file in: /home/${{ env.PI_USER }}/obsidian-vault/Kindle Sync/"
+
+      - name: Notify deployment success
+        if: success()
+        run: |
+          echo "✅ Deployment to ${{ env.PI_IP }} completed successfully!"
+          echo "Service is running and ready to sync files."
+
+      - name: Notify deployment failure
+        if: failure()
+        run: |
+          echo "❌ Deployment to ${{ env.PI_IP }} failed!"
+          echo "Check the logs above for details."
+          exit 1
