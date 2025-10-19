@@ -1,0 +1,46 @@
+name: Test Key Format
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test-key:
+    runs-on: ubuntu-latest
+    name: Test SSH Key Format
+    
+    steps:
+      - name: Test SSH key format
+        run: |
+          echo "=== Testing SSH Key Format ==="
+          mkdir -p ~/.ssh
+          echo "Creating SSH key file from secret..."
+          echo "${{ secrets.PI_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          
+          echo "=== Key File Analysis ==="
+          echo "File size:"
+          wc -c ~/.ssh/id_rsa
+          echo ""
+          echo "File permissions:"
+          ls -la ~/.ssh/id_rsa
+          echo ""
+          echo "File type:"
+          file ~/.ssh/id_rsa
+          echo ""
+          echo "First 3 lines:"
+          head -3 ~/.ssh/id_rsa
+          echo ""
+          echo "Last 3 lines:"
+          tail -3 ~/.ssh/id_rsa
+          echo ""
+          echo "Hex dump of first 32 bytes:"
+          hexdump -C ~/.ssh/id_rsa | head -3
+          echo ""
+          echo "=== Testing Key with ssh-keygen ==="
+          ssh-keygen -l -f ~/.ssh/id_rsa || echo "ssh-keygen failed to read the key"
+          echo ""
+          echo "=== Testing Key with OpenSSL ==="
+          openssl rsa -in ~/.ssh/id_rsa -check -noout || echo "OpenSSL failed to read the key"
+          echo ""
+          echo "=== Testing Key with ssh-add ==="
+          ssh-add ~/.ssh/id_rsa || echo "ssh-add failed to read the key"
