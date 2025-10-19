@@ -1,408 +1,312 @@
-"""Unit tests for file watcher functionality."""
+"""
+Unit tests for file watcher functionality.
 
-import time
-from pathlib import Path
-from unittest.mock import Mock, patch
+Tests the file system monitoring and event handling.
+"""
 
 import pytest
-
-from src.file_watcher import ObsidianFileHandler, ObsidianFileWatcher
-
-
-class TestObsidianFileHandler:
-    """Test cases for ObsidianFileHandler class."""
-
-    def test_handler_initialization(self, config, temp_dir):
-        """Test ObsidianFileHandler initialization."""
-        callback = Mock()
-        handler = ObsidianFileHandler(config, callback)
-
-        assert handler.config == config
-        assert handler.callback == callback
-        assert handler.debounce_time == 0.1  # From test config
-        assert handler.markdown_pattern == "*.md"
-        assert handler.pdf_pattern == "*.pdf"
-
-    def test_should_process_file_markdown(self, config, temp_dir):
-        """Test should_process_file for markdown files."""
-        callback = Mock()
-        handler = ObsidianFileHandler(config, callback)
-
-        # Create a markdown file
-        md_file = temp_dir / "test.md"
-        md_file.write_text("# Test")
-
-        # Mock the sync folder check
-        with patch.object(
-            handler.config, "get_sync_folder_path", return_value=temp_dir
-        ):
-            assert handler._should_process_file(md_file) is True
-
-    def test_should_process_file_pdf(self, config, temp_dir):
-        """Test should_process_file for PDF files."""
-        callback = Mock()
-        handler = ObsidianFileHandler(config, callback)
-
-        # Create a PDF file
-        pdf_file = temp_dir / "test.pdf"
-        pdf_file.write_bytes(b"PDF content")
-
-        # Mock the sync folder check
-        with patch.object(
-            handler.config, "get_sync_folder_path", return_value=temp_dir
-        ):
-            assert handler._should_process_file(pdf_file) is True
-
-    def test_should_process_file_unsupported_type(self, config, temp_dir):
-        """Test should_process_file for unsupported file types."""
-        callback = Mock()
-        handler = ObsidianFileHandler(config, callback)
-
-        # Create an unsupported file
-        txt_file = temp_dir / "test.txt"
-        txt_file.write_text("Text content")
-
-        assert handler._should_process_file(txt_file) is False
-
-    def test_should_process_file_too_large(self, config, temp_dir):
-        """Test should_process_file for files that are too large."""
-        callback = Mock()
-        handler = ObsidianFileHandler(config, callback)
-
-        # Create a large file
-        large_file = temp_dir / "large.md"
-        large_file.write_text("x" * 1024 * 1024)  # 1MB of content
-
-        # Mock the sync folder check
-        with patch.object(
-            handler.config, "get_sync_folder_path", return_value=temp_dir
-        ):
-            # Should return False due to size limit (10MB in test config)
-            assert (
-                handler._should_process_file(large_file) is True
-            )  # 1MB is under 10MB limit
-
-    def test_parse_size(self, config):
-        """Test _parse_size method."""
-        callback = Mock()
-        handler = ObsidianFileHandler(config, callback)
-
-        assert handler._parse_size("1024") == 1024
-        assert handler._parse_size("1KB") == 1024
-        assert handler._parse_size("1MB") == 1024 * 1024
-        assert handler._parse_size("1GB") == 1024 * 1024 * 1024
-
-    def test_schedule_processing(self, config, temp_dir):
-        """Test _schedule_processing method."""
-        callback = Mock()
-        handler = ObsidianFileHandler(config, callback)
-
-        test_file = temp_dir / "test.md"
-        test_file.write_text("# Test")
-
-        # Mock threading.Timer
-        with patch("threading.Timer") as mock_timer:
-            handler._schedule_processing(test_file)
-
-            # Verify timer was created and started
-            mock_timer.assert_called_once()
-            mock_timer.return_value.start.assert_called_once()
-
-    def test_schedule_processing_cancels_previous(self, config, temp_dir):
-        """Test that scheduling processing cancels previous timer."""
-        callback = Mock()
-        handler = ObsidianFileHandler(config, callback)
-
-        test_file = temp_dir / "test.md"
-        test_file.write_text("# Test")
-
-        # Create a mock timer
-        mock_timer = Mock()
-        handler.pending_files[test_file] = mock_timer
-
-        with patch("threading.Timer") as new_mock_timer:
-            handler._schedule_processing(test_file)
-
-            # Verify previous timer was cancelled
-            mock_timer.cancel.assert_called_once()
-            # Verify new timer was created
-            new_mock_timer.assert_called_once()
-
-    def test_process_file_success(self, config, temp_dir):
-        """Test successful file processing."""
-        callback = Mock()
-        handler = ObsidianFileHandler(config, callback)
-
-        test_file = temp_dir / "test.md"
-        test_file.write_text("# Test")
-
-        # Mock the debounce time to be very small
-        handler.debounce_time = 0.01
-
-        # Mock the file's modification time to be old enough to pass debounce check
-        with patch("pathlib.Path.stat") as mock_stat:
-            stat_result = Mock()
-            stat_result.st_mtime = time.time() - 1.0  # 1 second ago
-            mock_stat.return_value = stat_result
-
-            # Process the file
-            handler._process_file(test_file)
-
-        # Verify callback was called
-        callback.assert_called_once_with(test_file)
-        # Verify file was added to processed files
-        assert test_file in handler.processed_files
-
-    def test_process_file_not_exists(self, config, temp_dir):
-        """Test processing a file that no longer exists."""
-        callback = Mock()
-        handler = ObsidianFileHandler(config, callback)
-
-        non_existent_file = temp_dir / "non_existent.md"
-
-        # Process the non-existent file
-        handler._process_file(non_existent_file)
-
-        # Verify callback was not called
-        callback.assert_not_called()
-
-    def test_on_modified_event(self, config, temp_dir):
-        """Test on_modified event handling."""
-        callback = Mock()
-        handler = ObsidianFileHandler(config, callback)
-
-        # Create a test file
-        test_file = temp_dir / "test.md"
-        test_file.write_text("# Test")
-
-        # Create a mock event
-        event = Mock()
-        event.is_directory = False
-        event.src_path = str(test_file)
-
-        # Mock the should_process_file method
-        with patch.object(handler, "_should_process_file", return_value=True):
-            with patch.object(handler, "_schedule_processing") as mock_schedule:
-                handler.on_modified(event)
-                mock_schedule.assert_called_once_with(test_file)
-
-    def test_on_created_event(self, config, temp_dir):
-        """Test on_created event handling."""
-        callback = Mock()
-        handler = ObsidianFileHandler(config, callback)
-
-        # Create a test file
-        test_file = temp_dir / "test.md"
-        test_file.write_text("# Test")
-
-        # Create a mock event
-        event = Mock()
-        event.is_directory = False
-        event.src_path = str(test_file)
-
-        # Mock the should_process_file method
-        with patch.object(handler, "_should_process_file", return_value=True):
-            with patch.object(handler, "_schedule_processing") as mock_schedule:
-                handler.on_created(event)
-                mock_schedule.assert_called_once_with(test_file)
-
-    def test_on_moved_event(self, config, temp_dir):
-        """Test on_moved event handling."""
-        callback = Mock()
-        handler = ObsidianFileHandler(config, callback)
-
-        # Create a test file
-        test_file = temp_dir / "test.md"
-        test_file.write_text("# Test")
-
-        # Create a mock event
-        event = Mock()
-        event.is_directory = False
-        event.dest_path = str(test_file)
-
-        # Mock the should_process_file method
-        with patch.object(handler, "_should_process_file", return_value=True):
-            with patch.object(handler, "_schedule_processing") as mock_schedule:
-                handler.on_moved(event)
-                mock_schedule.assert_called_once_with(test_file)
-
-    def test_ignore_directory_events(self, config):
-        """Test that directory events are ignored."""
-        callback = Mock()
-        handler = ObsidianFileHandler(config, callback)
-
-        # Create mock events for directories
-        modified_event = Mock()
-        modified_event.is_directory = True
-
-        created_event = Mock()
-        created_event.is_directory = True
-
-        moved_event = Mock()
-        moved_event.is_directory = True
-
-        # Mock the scheduling method
-        with patch.object(handler, "_schedule_processing") as mock_schedule:
-            handler.on_modified(modified_event)
-            handler.on_created(created_event)
-            handler.on_moved(moved_event)
-
-            # Verify no scheduling occurred
-            mock_schedule.assert_not_called()
-
-
-class TestObsidianFileWatcher:
-    """Test cases for ObsidianFileWatcher class."""
-
-    def test_watcher_initialization(self, config):
-        """Test ObsidianFileWatcher initialization."""
-        callback = Mock()
-        watcher = ObsidianFileWatcher(config, callback)
-
-        assert watcher.config == config
-        assert watcher.callback == callback
-        assert watcher.is_running is False
-
-    def test_start_watcher_success(self, config, obsidian_vault):
-        """Test successful watcher start."""
-        callback = Mock()
-        watcher = ObsidianFileWatcher(config, callback)
-
-        # Mock the observer instance
-        mock_observer = Mock()
-        watcher.observer = mock_observer
-
-        # Mock the config to return the test vault
-        with patch.object(
-            config, "get_obsidian_vault_path", return_value=obsidian_vault
-        ):
-            watcher.start()
-
-            # Verify observer was configured and started
-            mock_observer.schedule.assert_called_once()
-            mock_observer.start.assert_called_once()
-            assert watcher.is_running is True
-
-    def test_start_watcher_vault_not_exists(self, config):
-        """Test watcher start with non-existent vault."""
-        callback = Mock()
-        watcher = ObsidianFileWatcher(config, callback)
-
-        # Mock the config to return non-existent path
-        with patch.object(
-            config, "get_obsidian_vault_path", return_value=Path("/non/existent")
-        ):
-            with pytest.raises(FileNotFoundError):
-                watcher.start()
-
-    def test_stop_watcher(self, config):
-        """Test watcher stop."""
-        callback = Mock()
-        watcher = ObsidianFileWatcher(config, callback)
-
-        # Mock the observer
-        mock_observer = Mock()
-        watcher.observer = mock_observer
-        watcher.is_running = True
-
-        watcher.stop()
-
-        # Verify observer was stopped
-        mock_observer.stop.assert_called_once()
-        mock_observer.join.assert_called_once()
-        assert watcher.is_running is False
-
-    def test_stop_watcher_not_running(self, config):
-        """Test stopping a watcher that's not running."""
-        callback = Mock()
-        watcher = ObsidianFileWatcher(config, callback)
-
-        # Mock the observer
-        mock_observer = Mock()
-        watcher.observer = mock_observer
-        watcher.is_running = False
-
-        watcher.stop()
-
-        # Verify observer methods were not called
-        mock_observer.stop.assert_not_called()
-        mock_observer.join.assert_not_called()
-
-    def test_is_alive(self, config):
-        """Test is_alive method."""
-        callback = Mock()
-        watcher = ObsidianFileWatcher(config, callback)
-
-        # Mock the observer
-        mock_observer = Mock()
-        mock_observer.is_alive.return_value = True
-        watcher.observer = mock_observer
-
-        assert watcher.is_alive() is True
-
-        mock_observer.is_alive.return_value = False
-        assert watcher.is_alive() is False
-
-    def test_is_alive_no_observer(self, config):
-        """Test is_alive method when no observer exists."""
-        callback = Mock()
-        watcher = ObsidianFileWatcher(config, callback)
-        watcher.observer = None
-
-        assert watcher.is_alive() is False
-
-    def test_watch_subfolders_configuration(self, config, obsidian_vault):
-        """Test that watch_subfolders configuration is respected."""
-        callback = Mock()
-        watcher = ObsidianFileWatcher(config, callback)
-
-        # Mock the observer instance
-        mock_observer = Mock()
-        watcher.observer = mock_observer
-
-        # Mock the config
-        with patch.object(
-            config, "get_obsidian_vault_path", return_value=obsidian_vault
-        ):
-
-            def mock_get(key, default=None):
-                if key == "obsidian.watch_subfolders":
-                    return False
-                elif key == "obsidian.sync_folder":
-                    return "Kindle Sync"
-                return default
-
-            with patch.object(config, "get", side_effect=mock_get):
-                watcher.start()
-
-                # Verify recursive=False was passed
-                mock_observer.schedule.assert_called_once()
-                call_args = mock_observer.schedule.call_args
-                assert call_args[1]["recursive"] is False
-
-    def test_folder_creation_on_start(self, config, temp_dir):
-        """Test that required folders are created on start."""
-        callback = Mock()
-        watcher = ObsidianFileWatcher(config, callback)
-
-        # Create a vault path
-        vault_path = temp_dir / "vault"
-        vault_path.mkdir()
-
-        # Mock the observer
-        with patch("watchdog.observers.Observer") as mock_observer_class:
-            mock_observer = Mock()
-            mock_observer_class.return_value = mock_observer
-
-            # Mock the config
-            with patch.object(
-                config, "get_obsidian_vault_path", return_value=vault_path
-            ):
-                watcher.start()
-
-                # Verify folders were created
-                sync_folder = vault_path / "Kindle Sync"
-                templates_folder = vault_path / "Templates"
-
-                assert sync_folder.exists()
-                assert templates_folder.exists()
+import tempfile
+import time
+from pathlib import Path
+from unittest.mock import Mock, patch, MagicMock
+
+from src.file_watcher import FileWatcher
+from src.config import Config
+from src.core.exceptions import FileProcessingError, ErrorSeverity
+
+
+class TestFileWatcher:
+    """Test cases for FileWatcher."""
+
+    @pytest.fixture
+    def mock_config(self):
+        """Create a mock configuration."""
+        config = Mock(spec=Config)
+        config.get.side_effect = lambda key, default=None: {
+            "obsidian.watch_subfolders": True,
+            "advanced.debounce_time": 1.0,
+            "patterns.markdown_files": "*.md",
+            "patterns.pdf_files": "*.pdf"
+        }.get(key, default)
+        
+        # Mock config methods
+        config.get_obsidian_vault_path.return_value = Path("/tmp/test_vault")
+        return config
+
+    @pytest.fixture
+    def temp_directory(self):
+        """Create a temporary directory for testing."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            yield Path(temp_dir)
+
+    @pytest.fixture
+    def file_watcher(self, mock_config):
+        """Create a FileWatcher instance."""
+        with patch('src.file_watcher.Observer'):
+            return FileWatcher(mock_config)
+
+    def test_file_watcher_initialization(self, mock_config):
+        """Test file watcher initialization."""
+        with patch('src.file_watcher.Observer'):
+            watcher = FileWatcher(mock_config)
+            assert watcher.config == mock_config
+            assert watcher.observer is not None
+
+    def test_start_watching_success(self, file_watcher, temp_directory):
+        """Test successful start of file watching."""
+        # Mock the vault path to use temp directory
+        file_watcher.config.get_obsidian_vault_path.return_value = temp_directory
+        
+        # Mock observer methods
+        file_watcher.observer.start.return_value = None
+        file_watcher.observer.is_alive.return_value = True
+        
+        result = file_watcher.start()
+        
+        assert result is True
+        file_watcher.observer.schedule.assert_called_once()
+        file_watcher.observer.start.assert_called_once()
+
+    def test_start_watching_vault_not_exists(self, file_watcher):
+        """Test start watching when vault path doesn't exist."""
+        # Mock non-existent vault path
+        file_watcher.config.get_obsidian_vault_path.return_value = Path("/non/existent/path")
+        
+        result = file_watcher.start()
+        
+        assert result is False
+
+    def test_start_watching_observer_error(self, file_watcher, temp_directory):
+        """Test start watching with observer error."""
+        # Mock the vault path
+        file_watcher.config.get_obsidian_vault_path.return_value = temp_directory
+        
+        # Mock observer error
+        file_watcher.observer.start.side_effect = Exception("Observer start failed")
+        
+        result = file_watcher.start()
+        
+        assert result is False
+
+    def test_stop_watching_success(self, file_watcher):
+        """Test successful stop of file watching."""
+        # Mock observer methods
+        file_watcher.observer.stop.return_value = None
+        file_watcher.observer.join.return_value = None
+        
+        file_watcher.stop()
+        
+        file_watcher.observer.stop.assert_called_once()
+        file_watcher.observer.join.assert_called_once()
+
+    def test_stop_watching_observer_error(self, file_watcher):
+        """Test stop watching with observer error."""
+        # Mock observer error
+        file_watcher.observer.stop.side_effect = Exception("Observer stop failed")
+        
+        # Should not raise exception
+        file_watcher.stop()
+
+    def test_is_alive_true(self, file_watcher):
+        """Test is_alive returns True when observer is alive."""
+        file_watcher.observer.is_alive.return_value = True
+        
+        assert file_watcher.is_alive() is True
+
+    def test_is_alive_false(self, file_watcher):
+        """Test is_alive returns False when observer is not alive."""
+        file_watcher.observer.is_alive.return_value = False
+        
+        assert file_watcher.is_alive() is False
+
+    def test_is_alive_observer_error(self, file_watcher):
+        """Test is_alive handles observer error."""
+        file_watcher.observer.is_alive.side_effect = Exception("Observer error")
+        
+        assert file_watcher.is_alive() is False
+
+    def test_get_watched_paths(self, file_watcher, temp_directory):
+        """Test getting watched paths."""
+        # Mock the vault path
+        file_watcher.config.get_obsidian_vault_path.return_value = temp_directory
+        
+        paths = file_watcher.get_watched_paths()
+        
+        assert len(paths) == 1
+        assert paths[0] == str(temp_directory)
+
+    def test_get_watched_paths_with_subfolders(self, file_watcher, temp_directory):
+        """Test getting watched paths with subfolders."""
+        # Create subdirectories
+        subdir1 = temp_directory / "subdir1"
+        subdir2 = temp_directory / "subdir2"
+        subdir1.mkdir()
+        subdir2.mkdir()
+        
+        # Mock the vault path
+        file_watcher.config.get_obsidian_vault_path.return_value = temp_directory
+        
+        paths = file_watcher.get_watched_paths()
+        
+        # Should include main directory and subdirectories
+        assert len(paths) >= 1
+        assert str(temp_directory) in paths
+
+    def test_handle_file_event_created(self, file_watcher):
+        """Test handling file created event."""
+        # Mock event
+        mock_event = Mock()
+        mock_event.event_type = 'created'
+        mock_event.src_path = '/tmp/test_vault/test.md'
+        mock_event.is_directory = False
+        
+        # Mock file processor
+        file_watcher.file_processor = Mock()
+        
+        file_watcher._handle_file_event(mock_event)
+        
+        # Should call file processor
+        file_watcher.file_processor.process_file.assert_called_once()
+
+    def test_handle_file_event_modified(self, file_watcher):
+        """Test handling file modified event."""
+        # Mock event
+        mock_event = Mock()
+        mock_event.event_type = 'modified'
+        mock_event.src_path = '/tmp/test_vault/test.md'
+        mock_event.is_directory = False
+        
+        # Mock file processor
+        file_watcher.file_processor = Mock()
+        
+        file_watcher._handle_file_event(mock_event)
+        
+        # Should call file processor
+        file_watcher.file_processor.process_file.assert_called_once()
+
+    def test_handle_file_event_moved(self, file_watcher):
+        """Test handling file moved event."""
+        # Mock event
+        mock_event = Mock()
+        mock_event.event_type = 'moved'
+        mock_event.src_path = '/tmp/test_vault/old.md'
+        mock_event.dest_path = '/tmp/test_vault/new.md'
+        mock_event.is_directory = False
+        
+        # Mock file processor
+        file_watcher.file_processor = Mock()
+        
+        file_watcher._handle_file_event(mock_event)
+        
+        # Should call file processor for both old and new paths
+        assert file_watcher.file_processor.process_file.call_count == 2
+
+    def test_handle_file_event_directory(self, file_watcher):
+        """Test handling directory event (should be ignored)."""
+        # Mock event
+        mock_event = Mock()
+        mock_event.event_type = 'created'
+        mock_event.src_path = '/tmp/test_vault/new_dir'
+        mock_event.is_directory = True
+        
+        # Mock file processor
+        file_watcher.file_processor = Mock()
+        
+        file_watcher._handle_file_event(mock_event)
+        
+        # Should not call file processor for directories
+        file_watcher.file_processor.process_file.assert_not_called()
+
+    def test_handle_file_event_unsupported_type(self, file_watcher):
+        """Test handling unsupported file type event."""
+        # Mock event
+        mock_event = Mock()
+        mock_event.event_type = 'created'
+        mock_event.src_path = '/tmp/test_vault/test.txt'
+        mock_event.is_directory = False
+        
+        # Mock file processor
+        file_watcher.file_processor = Mock()
+        
+        file_watcher._handle_file_event(mock_event)
+        
+        # Should not call file processor for unsupported types
+        file_watcher.file_processor.process_file.assert_not_called()
+
+    def test_handle_file_event_processor_error(self, file_watcher):
+        """Test handling file event with processor error."""
+        # Mock event
+        mock_event = Mock()
+        mock_event.event_type = 'created'
+        mock_event.src_path = '/tmp/test_vault/test.md'
+        mock_event.is_directory = False
+        
+        # Mock file processor with error
+        file_watcher.file_processor = Mock()
+        file_watcher.file_processor.process_file.side_effect = Exception("Processing failed")
+        
+        # Should not raise exception
+        file_watcher._handle_file_event(mock_event)
+
+    def test_is_supported_file_type_markdown(self, file_watcher):
+        """Test checking supported file type for markdown."""
+        assert file_watcher._is_supported_file_type("test.md") is True
+        assert file_watcher._is_supported_file_type("test.MD") is True
+
+    def test_is_supported_file_type_pdf(self, file_watcher):
+        """Test checking supported file type for PDF."""
+        assert file_watcher._is_supported_file_type("test.pdf") is True
+        assert file_watcher._is_supported_file_type("test.PDF") is True
+
+    def test_is_supported_file_type_unsupported(self, file_watcher):
+        """Test checking unsupported file types."""
+        assert file_watcher._is_supported_file_type("test.txt") is False
+        assert file_watcher._is_supported_file_type("test.doc") is False
+        assert file_watcher._is_supported_file_type("test") is False
+
+    def test_set_file_processor(self, file_watcher):
+        """Test setting file processor."""
+        mock_processor = Mock()
+        
+        file_watcher.set_file_processor(mock_processor)
+        
+        assert file_watcher.file_processor == mock_processor
+
+    def test_get_statistics(self, file_watcher):
+        """Test getting file watcher statistics."""
+        stats = file_watcher.get_statistics()
+        
+        assert "events_processed" in stats
+        assert "files_created" in stats
+        assert "files_modified" in stats
+        assert "files_moved" in stats
+        assert "errors" in stats
+
+    def test_reset_statistics(self, file_watcher):
+        """Test resetting file watcher statistics."""
+        # Process some events to generate statistics
+        file_watcher.stats["events_processed"] = 10
+        file_watcher.stats["files_created"] = 5
+        
+        file_watcher.reset_statistics()
+        
+        assert file_watcher.stats["events_processed"] == 0
+        assert file_watcher.stats["files_created"] == 0
+
+    def test_debounce_mechanism(self, file_watcher):
+        """Test debounce mechanism for rapid file changes."""
+        # Mock event
+        mock_event = Mock()
+        mock_event.event_type = 'modified'
+        mock_event.src_path = '/tmp/test_vault/test.md'
+        mock_event.is_directory = False
+        
+        # Mock file processor
+        file_watcher.file_processor = Mock()
+        
+        # Process the same event multiple times rapidly
+        for _ in range(5):
+            file_watcher._handle_file_event(mock_event)
+        
+        # Should only process once due to debouncing
+        assert file_watcher.file_processor.process_file.call_count <= 1

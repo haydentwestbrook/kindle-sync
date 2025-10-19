@@ -1,195 +1,76 @@
-# Kindle Scribe Sync - Makefile
-# Provides convenient commands for development and testing
+.PHONY: help install install-dev test test-unit test-integration test-e2e test-coverage lint format type-check security-check benchmark clean build docker-build docker-run
 
-.PHONY: help install install-dev test test-unit test-integration test-e2e test-quick test-ci test-coverage clean lint format type-check security docker-build docker-test docker-clean docs
+help: ## Show this help message
+	@echo "Available commands:"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-# Default target
-help:
-	@echo "Kindle Scribe Sync - Available Commands:"
-	@echo ""
-	@echo "Installation:"
-	@echo "  install          Install production dependencies"
-	@echo "  install-dev      Install development dependencies"
-	@echo ""
-	@echo "Testing:"
-	@echo "  test             Run all tests"
-	@echo "  test-unit        Run unit tests only"
-	@echo "  test-integration Run integration tests only"
-	@echo "  test-e2e         Run end-to-end tests only"
-	@echo "  test-quick       Run quick tests (unit, no slow)"
-	@echo "  test-ci          Run CI-appropriate tests"
-	@echo "  test-coverage    Run tests with coverage report"
-	@echo ""
-	@echo "Code Quality:"
-	@echo "  lint             Run linting checks"
-	@echo "  format           Format code with black and isort"
-	@echo "  type-check       Run type checking with mypy"
-	@echo "  security         Run security checks"
-	@echo ""
-	@echo "Docker:"
-	@echo "  docker-build     Build Docker image"
-	@echo "  docker-test      Test Docker image"
-	@echo "  docker-clean     Clean Docker resources"
-	@echo ""
-	@echo "Utilities:"
-	@echo "  clean            Clean temporary files"
-	@echo "  docs             Generate documentation"
-
-# Installation
-install:
+install: ## Install production dependencies
 	pip install -r requirements.txt
 
-install-dev:
+install-dev: ## Install development dependencies
 	pip install -r requirements.txt
-	pip install -r requirements-test.txt
+	pip install -r requirements-dev.txt
+	pre-commit install
 
-# Testing
-test:
-	./scripts/run-tests.sh --type all --verbose
+test: ## Run all tests
+	pytest
 
-test-unit:
-	./scripts/run-tests.sh --type unit --verbose --coverage
+test-unit: ## Run unit tests only
+	pytest tests/unit/ -v
 
-test-integration:
-	./scripts/run-tests.sh --type integration --verbose
+test-integration: ## Run integration tests only
+	pytest tests/integration/ -v
 
-test-e2e:
-	./scripts/run-tests.sh --type e2e --verbose
+test-e2e: ## Run end-to-end tests only
+	pytest tests/e2e/ -v
 
-test-quick:
-	./scripts/run-tests.sh --quick --verbose
+test-coverage: ## Run tests with coverage report
+	pytest --cov=src --cov-report=html --cov-report=term-missing
 
-test-ci:
-	./scripts/run-tests.sh --ci --coverage
-
-test-coverage:
-	./scripts/run-tests.sh --type all --coverage --report test-report.md
-
-# Code Quality
-lint:
-	flake8 src/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
+lint: ## Run linting checks
+	flake8 src/ tests/
 	black --check src/ tests/
 	isort --check-only src/ tests/
 
-format:
+format: ## Format code with black and isort
 	black src/ tests/
 	isort src/ tests/
 
-type-check:
-	mypy src/ --ignore-missing-imports
+type-check: ## Run type checking with mypy
+	mypy src/
 
-security:
+security-check: ## Run security checks
 	bandit -r src/ -f json -o bandit-report.json
-	safety check --json --output safety-report.json
+	detect-secrets scan --baseline .secrets.baseline
 
-# Docker
-docker-build:
-	docker build -t kindle-sync:latest .
+benchmark: ## Run performance benchmarks
+	pytest tests/benchmarks/ --benchmark-only
 
-docker-test:
-	docker run --rm kindle-sync:latest python -c "import src; print('Import successful')"
-	docker-compose config
-	docker-compose build
-
-docker-clean:
-	docker system prune -f
-	docker image prune -f
-
-# Utilities
-clean:
+clean: ## Clean up generated files
 	find . -type f -name "*.pyc" -delete
 	find . -type d -name "__pycache__" -delete
 	find . -type d -name "*.egg-info" -exec rm -rf {} +
 	rm -rf build/
 	rm -rf dist/
-	rm -rf .pytest_cache/
-	rm -rf htmlcov/
 	rm -rf .coverage
-	rm -f test-results.xml
-	rm -f bandit-report.json
-	rm -f safety-report.json
-	rm -f test-report.md
+	rm -rf htmlcov/
+	rm -rf .pytest_cache/
+	rm -rf .mypy_cache/
+	rm -rf bandit-report.json
 
-docs:
-	@echo "Documentation generation not implemented yet"
+build: ## Build the package
+	python -m build
 
-# Development helpers
-dev-setup: install-dev
-	@echo "Setting up development environment..."
-	@echo "Creating sample config file..."
-	cp config.yaml.example config.yaml
-	@echo "Development setup complete!"
+docker-build: ## Build Docker image
+	docker build -t kindle-sync:latest .
 
-# Test specific components
-test-config:
-	python -m pytest tests/unit/test_config.py -v
+docker-run: ## Run Docker container
+	docker run -d --name kindle-sync -p 8080:8080 -v $(PWD)/config.yaml:/app/config.yaml kindle-sync:latest
 
-test-file-watcher:
-	python -m pytest tests/unit/test_file_watcher.py -v
+quality-check: lint type-check security-check ## Run all quality checks
 
-test-pdf-converter:
-	python -m pytest tests/unit/test_pdf_converter.py -v
+ci: quality-check test-coverage ## Run CI pipeline locally
 
-test-kindle-sync:
-	python -m pytest tests/unit/test_kindle_sync.py -v
-
-test-sync-processor:
-	python -m pytest tests/unit/test_sync_processor.py -v
-
-# Performance testing
-test-performance:
-	python -m pytest tests/ -m "slow" --benchmark-only
-
-# Specific test markers
-test-network:
-	python -m pytest tests/ -m "network" -v
-
-test-email:
-	python -m pytest tests/ -m "email" -v
-
-test-ocr:
-	python -m pytest tests/ -m "ocr" -v
-
-test-file-system:
-	python -m pytest tests/ -m "file_system" -v
-
-# Continuous integration
-ci: test-ci lint type-check security
-
-# Pre-commit checks
-pre-commit: format lint type-check test-quick
-
-# Release preparation
-release-check: test-coverage lint type-check security docker-test
-	@echo "Release checks completed successfully!"
-
-# Help for specific targets
-help-test:
-	@echo "Test Commands:"
-	@echo "  test-unit        Run unit tests only"
-	@echo "  test-integration Run integration tests only"
-	@echo "  test-e2e         Run end-to-end tests only"
-	@echo "  test-quick       Run quick tests (unit, no slow)"
-	@echo "  test-ci          Run CI-appropriate tests"
-	@echo "  test-coverage    Run tests with coverage report"
-	@echo "  test-performance Run performance tests"
-	@echo "  test-config      Test configuration module"
-	@echo "  test-file-watcher Test file watcher module"
-	@echo "  test-pdf-converter Test PDF converter module"
-	@echo "  test-kindle-sync Test Kindle sync module"
-	@echo "  test-sync-processor Test sync processor module"
-
-help-docker:
-	@echo "Docker Commands:"
-	@echo "  docker-build     Build Docker image"
-	@echo "  docker-test      Test Docker image"
-	@echo "  docker-clean     Clean Docker resources"
-
-help-quality:
-	@echo "Code Quality Commands:"
-	@echo "  lint             Run linting checks"
-	@echo "  format           Format code with black and isort"
-	@echo "  type-check       Run type checking with mypy"
-	@echo "  security         Run security checks"
-	@echo "  pre-commit       Run pre-commit checks"
-	@echo "  ci               Run CI checks"
+dev-setup: install-dev ## Set up development environment
+	@echo "Development environment set up successfully!"
+	@echo "Run 'make help' to see available commands"

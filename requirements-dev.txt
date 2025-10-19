@@ -1,0 +1,32 @@
+# Development dependencies
+-r requirements.txt
+
+# Code quality tools
+black==23.12.1
+isort==5.13.2
+flake8==7.0.0
+mypy==1.8.0
+pre-commit==3.6.0
+
+# Testing tools
+pytest-cov==4.1.0
+pytest-benchmark==4.0.0
+pytest-mock==3.12.0
+pytest-asyncio==0.23.2
+
+# Security tools
+bandit==1.7.5
+detect-secrets==1.4.0
+
+# Documentation tools
+sphinx==7.2.6
+sphinx-rtd-theme==2.0.0
+myst-parser==2.0.0
+
+# Type stubs
+types-PyYAML==6.0.12.12
+types-requests==2.31.0.10
+
+# Build tools
+build==1.0.3
+twine==4.0.2

@@ -1,0 +1,83 @@
+groups:
+  - name: kindle-sync-alerts
+    rules:
+      - alert: KindleSyncDown
+        expr: up{job="kindle-sync"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Kindle Sync service is down"
+          description: "Kindle Sync service has been down for more than 1 minute."
+
+      - alert: HighErrorRate
+        expr: rate(kindle_sync_errors_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High error rate detected"
+          description: "Kindle Sync error rate is {{ $value }} errors per second."
+
+      - alert: ProcessingTimeHigh
+        expr: histogram_quantile(0.95, rate(kindle_sync_file_processing_duration_seconds_bucket[5m])) > 30
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "File processing time is high"
+          description: "95th percentile processing time is {{ $value }} seconds."
+
+      - alert: QueueSizeHigh
+        expr: kindle_sync_processing_queue_size > 100
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Processing queue is backing up"
+          description: "Queue size is {{ $value }} items."
+
+      - alert: MemoryUsageHigh
+        expr: kindle_sync_memory_usage_bytes > 1073741824  # 1GB
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value }} bytes."
+
+      - alert: EmailServiceDown
+        expr: rate(kindle_sync_emails_sent_total[10m]) == 0 and rate(kindle_sync_files_processed_total[10m]) > 0
+        for: 10m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Email service appears to be down"
+          description: "No emails sent in the last 10 minutes despite file processing activity."
+
+      - alert: DatabaseConnectionIssues
+        expr: rate(kindle_sync_database_errors_total[5m]) > 0.01
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Database connection issues"
+          description: "Database error rate is {{ $value }} errors per second."
+
+      - alert: DiskSpaceLow
+        expr: (node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) < 0.1
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk space is critically low"
+          description: "Only {{ $value | humanizePercentage }} disk space remaining."
+
+      - alert: NoFilesProcessed
+        expr: rate(kindle_sync_files_processed_total[1h]) == 0
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "No files processed in the last hour"
+          description: "No files have been processed in the last hour. Check if the service is working correctly."
