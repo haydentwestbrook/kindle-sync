@@ -39,10 +39,10 @@ class TestConfig:
         with pytest.raises(ConfigurationError):
             Config(str(invalid_yaml_file))
 
-    def test_get_method(self, config: Config):
+    def test_get_method(self, config: Config, obsidian_vault: Path):
         """Test get method for configuration values."""
         # Test existing key
-        assert config.get("obsidian.vault_path") == "/tmp/test_obsidian"
+        assert config.get("obsidian.vault_path") == str(obsidian_vault)
         assert config.get("kindle.email") == "test@kindle.com"
 
         # Test non-existing key with default
@@ -51,21 +51,21 @@ class TestConfig:
         # Test non-existing key without default
         assert config.get("non.existing.key") is None
 
-    def test_get_obsidian_vault_path(self, config: Config):
+    def test_get_obsidian_vault_path(self, config: Config, obsidian_vault: Path):
         """Test get_obsidian_vault_path method."""
         vault_path = config.get_obsidian_vault_path()
-        assert vault_path == Path("/tmp/test_obsidian")
+        assert vault_path == obsidian_vault
 
-    def test_get_sync_folder_path(self, config: Config):
+    def test_get_sync_folder_path(self, config: Config, obsidian_vault: Path):
         """Test get_sync_folder_path method."""
         sync_path = config.get_sync_folder_path()
-        expected = Path("/tmp/test_obsidian") / "Kindle Sync"
+        expected = obsidian_vault / "Kindle Sync"
         assert sync_path == expected
 
-    def test_get_templates_folder_path(self, config: Config):
+    def test_get_templates_folder_path(self, config: Config, obsidian_vault: Path):
         """Test get_templates_folder_path method."""
         templates_path = config.get_templates_folder_path()
-        expected = Path("/tmp/test_obsidian") / "Templates"
+        expected = obsidian_vault / "Templates"
         assert templates_path == expected
 
     def test_get_backup_folder_path(self, config: Config):
