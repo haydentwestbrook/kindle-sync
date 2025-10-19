@@ -13,7 +13,7 @@ from pathlib import Path
 
 from src.config import Config
 from src.core.exceptions import ErrorSeverity, FileProcessingError
-from src.file_watcher import FileWatcher
+from src.file_watcher import ObsidianFileWatcher
 
 
 class TestFileWatcher:

@@ -15,7 +15,7 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import relationship
 
 Base = declarative_base()
@@ -72,7 +72,7 @@ class FileOperation(Base):  # type: ignore
     status = Column(String(20), nullable=False, default=ProcessingStatus.PENDING)
     error_message = Column(Text, nullable=True)
     processing_time_ms = Column(Integer, nullable=True)
-    metadata = Column(Text, nullable=True)  # JSON string for additional data
+    operation_metadata = Column(Text, nullable=True)  # JSON string for additional data
 
     # Relationships
     file = relationship("ProcessedFile", back_populates="operations")
