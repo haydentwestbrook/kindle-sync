@@ -331,13 +331,15 @@ This document tests the complete automation workflow.
                                 "get_sync_folder_path",
                                 return_value=sync_folder,
                             ):
+                                # Mock returns 3 for each folder (sync and backup)
                                 mock_cleanup.return_value = 3
 
                                 cleaned_count = processor.cleanup_old_files(
                                     max_age_days=30
                                 )
 
-                                assert cleaned_count == 6  # 3 from sync + 3 from backup
+                                # Should be 3 + 3 = 6 total cleaned files
+                                assert cleaned_count == 6
                                 assert mock_cleanup.call_count == 2
 
     @pytest.mark.e2e
