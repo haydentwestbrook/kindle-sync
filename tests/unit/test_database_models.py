@@ -7,7 +7,7 @@ Tests the SQLAlchemy models for persistent state management.
 from datetime import datetime
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 from src.database.models import Base, FileOperation, ProcessedFile, SystemMetrics
@@ -21,6 +21,12 @@ class TestDatabaseModels:
         """Create an in-memory SQLite engine for testing."""
         engine = create_engine("sqlite:///:memory:", echo=False)
         Base.metadata.create_all(engine)
+        
+        # Enable foreign key constraints for SQLite
+        with engine.connect() as conn:
+            conn.execute(text("PRAGMA foreign_keys=ON"))
+            conn.commit()
+        
         return engine
 
     @pytest.fixture

@@ -24,6 +24,8 @@ class EmailReceiver:
         self.imap_config = self.get_imap_config()
         self.approved_senders = config.get_approved_senders()
         self.sync_folder_path = config.get_sync_folder_path()
+        self.kindle_email = config.get_kindle_email()
+        self.enabled = self.is_enabled()
 
         # Initialize processed emails tracking
         self.prevent_duplicates = self.config.get(
@@ -38,6 +40,14 @@ class EmailReceiver:
         self.processed_emails = (
             self._load_processed_emails() if self.prevent_duplicates else set()
         )
+
+        # Statistics tracking
+        self.stats = {
+            "emails_checked": 0,
+            "emails_processed": 0,
+            "pdfs_downloaded": 0,
+            "errors": 0
+        }
 
         logger.info("Email receiver initialized")
         logger.info(f"Approved senders: {self.approved_senders}")
@@ -625,3 +635,99 @@ class EmailReceiver:
 
         except Exception as e:
             logger.error(f"Error during email polling: {e}")
+
+    # Methods expected by tests
+    def _connect_to_imap(self):
+        """Connect to IMAP server (alias for connect_to_imap)."""
+        return self.connect_to_imap()
+
+    def _extract_pdf_attachments(self, email_message):
+        """Extract PDF attachments from email message."""
+        attachments = []
+        try:
+            for part in email_message.walk():
+                if part.get_content_disposition() == "attachment":
+                    filename = part.get_filename()
+                    if filename and filename.lower().endswith('.pdf'):
+                        # Decode filename if needed
+                        filename = self._decode_header(filename)
+                        content = part.get_payload(decode=True)
+                        attachments.append({
+                            "filename": filename,
+                            "content": content
+                        })
+        except Exception as e:
+            logger.error(f"Error extracting PDF attachments: {e}")
+        return attachments
+
+    def _save_pdf_attachment(self, attachment, filename, email_id):
+        """Save PDF attachment to sync folder."""
+        try:
+            # Generate unique filename with timestamp
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            email_id_str = (
+                email_id.decode() if isinstance(email_id, bytes) else str(email_id)
+            )
+            base_name = Path(filename).stem
+            extension = Path(filename).suffix
+
+            # Create unique filename
+            unique_filename = f"{base_name}_{timestamp}_{email_id_str}{extension}"
+
+            # Ensure sync folder exists
+            self.sync_folder_path.mkdir(parents=True, exist_ok=True)
+
+            # Save file
+            pdf_path = self.sync_folder_path / unique_filename
+
+            with open(pdf_path, "wb") as f:
+                f.write(attachment["content"])
+
+            logger.info(f"Saved PDF attachment: {pdf_path}")
+            return pdf_path
+
+        except Exception as e:
+            logger.error(f"Error saving PDF attachment: {e}")
+            return None
+
+    def _mark_email_as_read(self, imap, email_id):
+        """Mark email as read."""
+        try:
+            result = imap.store(email_id, "+FLAGS", "\\Seen")
+            return result[0] == "OK"
+        except Exception as e:
+            logger.error(f"Error marking email as read: {e}")
+            return False
+
+    def _delete_email(self, imap, email_id):
+        """Delete email."""
+        try:
+            result = imap.store(email_id, "+FLAGS", "\\Deleted")
+            if result[0] == "OK":
+                imap.expunge()
+                return True
+            return False
+        except Exception as e:
+            logger.error(f"Error deleting email: {e}")
+            return False
+
+    def _is_duplicate_email(self, email_id):
+        """Check if email has already been processed."""
+        return self._is_email_processed(email_id)
+
+    def _record_processed_email(self, email_id):
+        """Record email as processed."""
+        self._save_processed_email(email_id)
+
+    def get_statistics(self):
+        """Get email receiver statistics."""
+        return self.stats.copy()
+
+    def reset_statistics(self):
+        """Reset email receiver statistics."""
+        self.stats = {
+            "emails_checked": 0,
+            "emails_processed": 0,
+            "pdfs_downloaded": 0,
+            "errors": 0
+        }

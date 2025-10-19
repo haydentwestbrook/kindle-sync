@@ -64,7 +64,7 @@ class FileOperation(Base):  # type: ignore
     __tablename__ = "file_operations"
 
     id = Column(Integer, primary_key=True)
-    file_id = Column(Integer, ForeignKey("processed_files.id"), nullable=False)
+    file_id = Column(Integer, ForeignKey("processed_files.id", ondelete="CASCADE"), nullable=False)
     operation_type = Column(String(50), nullable=False)  # convert, send, backup, etc.
     started_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
@@ -72,9 +72,16 @@ class FileOperation(Base):  # type: ignore
     error_message = Column(Text, nullable=True)
     processing_time_ms = Column(Integer, nullable=True)
     operation_metadata = Column(Text, nullable=True)  # JSON string for additional data
+    details = Column(Text, nullable=True)  # Additional details about the operation
 
     # Relationships
     file = relationship("ProcessedFile", back_populates="operations")
+
+    # Property for backward compatibility
+    @property
+    def timestamp(self):
+        """Alias for started_at."""
+        return self.started_at
 
     # Indexes
     __table_args__ = (
@@ -94,6 +101,37 @@ class SystemMetrics(Base):  # type: ignore
     metric_value = Column(Float, nullable=False)
     metric_unit = Column(String(20), nullable=True)  # ms, bytes, count, etc.
     tags = Column(Text, nullable=True)  # JSON string for tags
+
+    # Aliases for backward compatibility with tests
+    @property
+    def name(self) -> str:
+        """Alias for metric_name."""
+        return self.metric_name
+    
+    @name.setter
+    def name(self, value: str):
+        """Alias for metric_name."""
+        self.metric_name = value
+    
+    @property
+    def value(self) -> float:
+        """Alias for metric_value."""
+        return self.metric_value
+    
+    @value.setter
+    def value(self, value: float):
+        """Alias for metric_value."""
+        self.metric_value = value
+    
+    @property
+    def labels(self) -> str:
+        """Alias for tags."""
+        return self.tags
+    
+    @labels.setter
+    def labels(self, value: str):
+        """Alias for tags."""
+        self.tags = value
 
     # Indexes
     __table_args__ = (Index("idx_timestamp_metric", "timestamp", "metric_name"),)

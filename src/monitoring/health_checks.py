@@ -118,7 +118,13 @@ class HealthChecker:
 
         try:
             # Run check with timeout
-            check_func = self.checks[name]
+            # Get the method from the instance to allow for proper mocking
+            check_method_name = f"_check_{name}"
+            if hasattr(self, check_method_name):
+                check_func = getattr(self, check_method_name)
+            else:
+                check_func = self.checks[name]
+            
             timeout = self.check_timeouts[name]
 
             if asyncio.iscoroutinefunction(check_func):
@@ -135,6 +141,16 @@ class HealthChecker:
             # Ensure result is a HealthCheckResult
             if isinstance(result, HealthCheckResult):
                 result.response_time_ms = response_time
+            elif isinstance(result, tuple) and len(result) == 2:
+                # Convert tuple (status, message) to HealthCheckResult
+                status_str, message = result
+                status = HealthStatus(status_str) if status_str in [s.value for s in HealthStatus] else HealthStatus.UNHEALTHY
+                result = HealthCheckResult(
+                    name=name,
+                    status=status,
+                    response_time_ms=response_time,
+                    error_message=message if status != HealthStatus.HEALTHY else None
+                )
             else:
                 # Convert other types to HealthCheckResult
                 result = HealthCheckResult(
@@ -460,43 +476,39 @@ class HealthChecker:
 
     def _check_config_paths(self) -> tuple[str, str]:
         """Check configuration paths accessibility."""
-        try:
-            # Get vault path
-            vault_path = self.config.get_obsidian_vault_path()
-            if not vault_path.exists():
-                return ("unhealthy", f"Vault path does not exist: {vault_path}")
-            
-            if not vault_path.is_dir():
-                return ("unhealthy", f"Vault path is not a directory: {vault_path}")
-            
-            # Check sync folder
-            sync_folder = self.config.get_sync_folder_path()
-            if not sync_folder.exists():
-                try:
-                    sync_folder.mkdir(parents=True, exist_ok=True)
-                except Exception as e:
-                    return ("unhealthy", f"Sync folder not accessible: {e}")
-            
-            # Check backup folder
-            backup_folder = self.config.get_backup_folder_path()
-            if not backup_folder.exists():
-                try:
-                    backup_folder.mkdir(parents=True, exist_ok=True)
-                except Exception as e:
-                    return ("unhealthy", f"Backup folder not creatable: {e}")
-            
-            # Test write access to vault
-            test_file = vault_path / ".health_check_test"
+        # Get vault path
+        vault_path = self.config.get_obsidian_vault_path()
+        if not vault_path.exists():
+            return ("unhealthy", f"Vault path does not exist: {vault_path}")
+        
+        if not vault_path.is_dir():
+            return ("unhealthy", f"Vault path is not a directory: {vault_path}")
+        
+        # Check sync folder
+        sync_folder = self.config.get_sync_folder_path()
+        if not sync_folder.exists():
             try:
-                test_file.write_text("test")
-                test_file.unlink()
+                sync_folder.mkdir(parents=True, exist_ok=True)
             except Exception as e:
-                return ("unhealthy", f"Vault not readable/writable: {e}")
-            
-            return ("healthy", "All configured paths are accessible")
-            
+                return ("unhealthy", f"Sync folder not accessible: {e}")
+        
+        # Check backup folder
+        backup_folder = self.config.get_backup_folder_path()
+        if not backup_folder.exists():
+            try:
+                backup_folder.mkdir(parents=True, exist_ok=True)
+            except Exception as e:
+                return ("unhealthy", f"Backup folder not creatable: {e}")
+        
+        # Test write access to vault
+        test_file = vault_path / ".health_check_test"
+        try:
+            test_file.write_text("test")
+            test_file.unlink()
         except Exception as e:
-            return ("unhealthy", f"Error checking config paths: {e}")
+            return ("unhealthy", f"Vault not readable/writable: {e}")
+        
+        return ("healthy", "All configured paths are accessible")
 
     def _check_database_connection(self) -> tuple[str, str]:
         """Check database connection."""
@@ -534,24 +546,20 @@ class HealthChecker:
 
     def _check_temp_directory_access(self) -> tuple[str, str]:
         """Check temporary directory access."""
+        import tempfile
+        import os
+        
+        # Test temp directory access
+        temp_dir = Path(tempfile.gettempdir())
+        if not temp_dir.exists():
+            return ("unhealthy", "Temporary directory not accessible or writable")
+        
+        # Test write access
+        test_file = temp_dir / "kindle_sync_health_test"
         try:
-            import tempfile
-            import os
-            
-            # Test temp directory access
-            temp_dir = Path(tempfile.gettempdir())
-            if not temp_dir.exists():
-                return ("unhealthy", "Temporary directory not accessible or writable")
-            
-            # Test write access
-            test_file = temp_dir / "kindle_sync_health_test"
-            try:
-                test_file.write_text("test")
-                test_file.unlink()
-            except Exception as e:
-                return ("unhealthy", f"Error accessing temporary directory: {e}")
-            
-            return ("healthy", "Temporary directory is accessible")
-            
+            test_file.write_text("test")
+            test_file.unlink()
         except Exception as e:
             return ("unhealthy", f"Error accessing temporary directory: {e}")
+        
+        return ("healthy", "Temporary directory is accessible")
