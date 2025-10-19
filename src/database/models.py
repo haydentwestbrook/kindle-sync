@@ -110,7 +110,7 @@ class HealthCheck(Base):  # type: ignore
     status = Column(String(20), nullable=False)  # healthy, unhealthy, degraded
     response_time_ms = Column(Integer, nullable=True)
     error_message = Column(Text, nullable=True)
-    metadata = Column(Text, nullable=True)  # JSON string for additional data
+    check_metadata = Column(Text, nullable=True)  # JSON string for additional data
 
     # Indexes
     __table_args__ = (
@@ -134,7 +134,7 @@ class ProcessingQueue(Base):  # type: ignore
     )  # For delayed processing
     retry_count = Column(Integer, default=0)
     max_retries = Column(Integer, default=3)
-    metadata = Column(Text, nullable=True)  # JSON string for processing options
+    queue_metadata = Column(Text, nullable=True)  # JSON string for processing options
 
     # Indexes
     __table_args__ = (
