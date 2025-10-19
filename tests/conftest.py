@@ -36,11 +36,11 @@ def temp_dir() -> Generator[Path, None, None]:
 
 
 @pytest.fixture
-def sample_config() -> Dict[str, Any]:
+def sample_config(obsidian_vault: Path) -> Dict[str, Any]:
     """Sample configuration for testing."""
     return {
         "obsidian": {
-            "vault_path": "/tmp/test_obsidian",
+            "vault_path": str(obsidian_vault),
             "sync_folder": "Kindle Sync",
             "templates_folder": "Templates",
             "watch_subfolders": True,
@@ -48,10 +48,13 @@ def sample_config() -> Dict[str, Any]:
         "kindle": {
             "email": "test@kindle.com",
             "approved_senders": ["test@example.com"],
-            "smtp_server": "smtp.gmail.com",
-            "smtp_port": 587,
-            "smtp_username": "test@gmail.com",
-            "smtp_password": "test_password",
+        },
+        "smtp": {
+            "host": "smtp.gmail.com",
+            "port": 587,
+            "username": "test@gmail.com",
+            "password": "test_password",
+            "use_tls": True,
         },
         "processing": {
             "ocr": {"language": "eng", "confidence_threshold": 60},
