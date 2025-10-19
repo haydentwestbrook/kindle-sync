@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 class ErrorSeverity(Enum):
@@ -20,7 +20,7 @@ class KindleSyncError(Exception):
 
     message: str
     severity: ErrorSeverity
-    context: Optional[Dict[str, Any]] = None
+    context: dict[str, Any] | None = None
     recoverable: bool = True
     retry_count: int = 0
 
@@ -34,7 +34,7 @@ class FileProcessingError(KindleSyncError):
     def __init__(
         self,
         message: str,
-        file_path: Optional[str] = None,
+        file_path: str | None = None,
         severity: ErrorSeverity = ErrorSeverity.MEDIUM,
         **kwargs: Any,
     ):
@@ -50,7 +50,7 @@ class EmailServiceError(KindleSyncError):
     def __init__(
         self,
         message: str,
-        email_address: Optional[str] = None,
+        email_address: str | None = None,
         severity: ErrorSeverity = ErrorSeverity.HIGH,
         **kwargs: Any,
     ):
@@ -66,7 +66,7 @@ class ConfigurationError(KindleSyncError):
     def __init__(
         self,
         message: str,
-        config_key: Optional[str] = None,
+        config_key: str | None = None,
         severity: ErrorSeverity = ErrorSeverity.HIGH,
         **kwargs: Any,
     ):
@@ -82,7 +82,7 @@ class ValidationError(KindleSyncError):
     def __init__(
         self,
         message: str,
-        field_name: Optional[str] = None,
+        field_name: str | None = None,
         severity: ErrorSeverity = ErrorSeverity.MEDIUM,
         **kwargs: Any,
     ):
@@ -98,7 +98,7 @@ class SecretsError(KindleSyncError):
     def __init__(
         self,
         message: str,
-        secret_key: Optional[str] = None,
+        secret_key: str | None = None,
         severity: ErrorSeverity = ErrorSeverity.CRITICAL,
         **kwargs: Any,
     ):

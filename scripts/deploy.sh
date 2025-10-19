@@ -48,73 +48,73 @@ check_root() {
 # Check prerequisites
 check_prerequisites() {
     log_info "Checking prerequisites..."
-    
+
     # Check if Docker is installed
     if ! command -v docker &> /dev/null; then
         log_error "Docker is not installed. Please install Docker first."
         exit 1
     fi
-    
+
     # Check if Docker Compose is installed
     if ! command -v docker-compose &> /dev/null; then
         log_error "Docker Compose is not installed. Please install Docker Compose first."
         exit 1
     fi
-    
+
     # Check if config file exists
     if [[ ! -f "$CONFIG_FILE" ]]; then
         log_error "Configuration file $CONFIG_FILE not found."
         exit 1
     fi
-    
+
     log_success "Prerequisites check passed"
 }
 
 # Create necessary directories
 create_directories() {
     log_info "Creating necessary directories..."
-    
+
     mkdir -p "$BACKUP_DIR"
     mkdir -p "$LOG_DIR"
     mkdir -p "data"
-    
+
     log_success "Directories created"
 }
 
 # Backup existing data
 backup_data() {
     log_info "Creating backup of existing data..."
-    
+
     BACKUP_TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
     BACKUP_PATH="$BACKUP_DIR/backup_$BACKUP_TIMESTAMP"
-    
+
     mkdir -p "$BACKUP_PATH"
-    
+
     # Backup database if it exists
     if [[ -f "data/kindle_sync.db" ]]; then
         cp "data/kindle_sync.db" "$BACKUP_PATH/"
         log_info "Database backed up"
     fi
-    
+
     # Backup logs
     if [[ -d "$LOG_DIR" ]]; then
         cp -r "$LOG_DIR" "$BACKUP_PATH/"
         log_info "Logs backed up"
     fi
-    
+
     # Backup configuration
     cp "$CONFIG_FILE" "$BACKUP_PATH/"
     log_info "Configuration backed up"
-    
+
     log_success "Backup created at $BACKUP_PATH"
 }
 
 # Build Docker image
 build_image() {
     log_info "Building Docker image..."
-    
+
     docker build -t "$DOCKER_IMAGE" .
-    
+
     if [[ $? -eq 0 ]]; then
         log_success "Docker image built successfully"
     else
@@ -126,12 +126,12 @@ build_image() {
 # Stop existing container
 stop_container() {
     log_info "Stopping existing container..."
-    
+
     if docker ps -q -f name="$CONTAINER_NAME" | grep -q .; then
         docker stop "$CONTAINER_NAME"
         log_info "Container stopped"
     fi
-    
+
     if docker ps -aq -f name="$CONTAINER_NAME" | grep -q .; then
         docker rm "$CONTAINER_NAME"
         log_info "Container removed"
@@ -141,7 +141,7 @@ stop_container() {
 # Deploy new container
 deploy_container() {
     log_info "Deploying new container..."
-    
+
     docker run -d \
         --name "$CONTAINER_NAME" \
         --restart unless-stopped \
@@ -151,7 +151,7 @@ deploy_container() {
         -v "$(pwd)/$LOG_DIR:/app/logs" \
         -e TZ=UTC \
         "$DOCKER_IMAGE"
-    
+
     if [[ $? -eq 0 ]]; then
         log_success "Container deployed successfully"
     else
@@ -163,17 +163,17 @@ deploy_container() {
 # Health check
 health_check() {
     log_info "Performing health check..."
-    
+
     # Wait for container to start
     sleep 10
-    
+
     # Check if container is running
     if ! docker ps -q -f name="$CONTAINER_NAME" | grep -q .; then
         log_error "Container is not running"
         docker logs "$CONTAINER_NAME"
         exit 1
     fi
-    
+
     # Check health endpoint
     for i in {1..30}; do
         if curl -f http://localhost:8080/health &> /dev/null; then
@@ -183,7 +183,7 @@ health_check() {
         log_info "Waiting for service to be ready... ($i/30)"
         sleep 2
     done
-    
+
     log_error "Health check failed"
     docker logs "$CONTAINER_NAME"
     exit 1
@@ -192,16 +192,16 @@ health_check() {
 # Cleanup old images
 cleanup_images() {
     log_info "Cleaning up old Docker images..."
-    
+
     # Remove dangling images
     docker image prune -f
-    
+
     # Remove old versions of the app image (keep last 3)
     docker images "$APP_NAME" --format "table {{.Repository}}:{{.Tag}}\t{{.CreatedAt}}" | \
         tail -n +4 | \
         awk '{print $1}' | \
         xargs -r docker rmi
-    
+
     log_success "Cleanup completed"
 }
 
@@ -209,7 +209,7 @@ cleanup_images() {
 show_status() {
     log_info "Deployment Status:"
     echo "=================="
-    
+
     # Container status
     if docker ps -q -f name="$CONTAINER_NAME" | grep -q .; then
         log_success "Container: Running"
@@ -220,14 +220,14 @@ show_status() {
     else
         log_error "Container: Not running"
     fi
-    
+
     # Service endpoints
     echo ""
     echo "Service Endpoints:"
     echo "- Health Check: http://localhost:8080/health"
     echo "- Metrics: http://localhost:8080/metrics"
     echo "- Status: http://localhost:8080/status"
-    
+
     # Logs location
     echo ""
     echo "Logs:"
@@ -238,7 +238,7 @@ show_status() {
 # Main deployment function
 deploy() {
     log_info "Starting deployment of $APP_NAME..."
-    
+
     check_root
     check_prerequisites
     create_directories
@@ -249,40 +249,40 @@ deploy() {
     health_check
     cleanup_images
     show_status
-    
+
     log_success "Deployment completed successfully!"
 }
 
 # Rollback function
 rollback() {
     log_info "Starting rollback..."
-    
+
     # Stop current container
     stop_container
-    
+
     # Find latest backup
     LATEST_BACKUP=$(ls -t "$BACKUP_DIR"/backup_* 2>/dev/null | head -n1)
-    
+
     if [[ -z "$LATEST_BACKUP" ]]; then
         log_error "No backup found for rollback"
         exit 1
     fi
-    
+
     log_info "Rolling back to backup: $LATEST_BACKUP"
-    
+
     # Restore data
     if [[ -f "$LATEST_BACKUP/kindle_sync.db" ]]; then
         cp "$LATEST_BACKUP/kindle_sync.db" "data/"
     fi
-    
+
     if [[ -d "$LATEST_BACKUP/logs" ]]; then
         cp -r "$LATEST_BACKUP/logs"/* "$LOG_DIR/"
     fi
-    
+
     if [[ -f "$LATEST_BACKUP/$CONFIG_FILE" ]]; then
         cp "$LATEST_BACKUP/$CONFIG_FILE" ./
     fi
-    
+
     # Deploy previous version
     docker run -d \
         --name "$CONTAINER_NAME" \
@@ -293,7 +293,7 @@ rollback() {
         -v "$(pwd)/$LOG_DIR:/app/logs" \
         -e TZ=UTC \
         "$DOCKER_IMAGE"
-    
+
     log_success "Rollback completed"
 }
 

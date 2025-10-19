@@ -1,6 +1,6 @@
 """PDF conversion utilities for Kindle Scribe optimization."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import markdown
 import weasyprint
@@ -39,7 +39,7 @@ class MarkdownToPDFConverter:
 
         logger.info("PDF converter initialized")
 
-    def _setup_styles(self) -> Dict[str, ParagraphStyle]:
+    def _setup_styles(self) -> dict[str, ParagraphStyle]:
         """Set up paragraph styles for PDF generation."""
         styles = getSampleStyleSheet()
 
@@ -105,7 +105,7 @@ class MarkdownToPDFConverter:
         return custom_styles
 
     def convert_markdown_to_pdf(
-        self, markdown_path: Path, output_path: Optional[Path] = None
+        self, markdown_path: Path, output_path: Path | None = None
     ) -> Path:
         """Convert a Markdown file to PDF."""
         try:
@@ -118,7 +118,7 @@ class MarkdownToPDFConverter:
                 )
 
             # Read markdown content
-            with open(markdown_path, "r", encoding="utf-8") as f:
+            with open(markdown_path, encoding="utf-8") as f:
                 markdown_content = f.read()
 
             # Process markdown
@@ -253,7 +253,7 @@ class MarkdownToPDFConverter:
         # Build PDF
         doc.build(elements)
 
-    def _parse_html_to_reportlab(self, html_content: str) -> List:
+    def _parse_html_to_reportlab(self, html_content: str) -> list:
         """Parse HTML content and convert to ReportLab elements."""
         # This is a simplified parser - in production, you might want to use
         # BeautifulSoup
@@ -320,11 +320,11 @@ class MarkdownToPDFConverter:
 
         return elements
 
-    def _get_pdf_config(self) -> Dict[str, Any]:
+    def _get_pdf_config(self) -> dict[str, Any]:
         """Get PDF configuration."""
         return self.pdf_config
 
-    def _get_markdown_config(self) -> Dict[str, Any]:
+    def _get_markdown_config(self) -> dict[str, Any]:
         """Get markdown configuration."""
         return self.markdown_config
 
@@ -340,7 +340,7 @@ class PDFToMarkdownConverter:
         logger.info("PDF to Markdown converter initialized")
 
     def convert_pdf_to_markdown(
-        self, pdf_path: Path, output_path: Optional[Path] = None
+        self, pdf_path: Path, output_path: Path | None = None
     ) -> Path:
         """Convert a PDF file to Markdown using OCR."""
         try:
@@ -437,6 +437,6 @@ class PDFToMarkdownConverter:
 
         return "\n".join(processed_lines)
 
-    def _get_ocr_config(self) -> Dict[str, Any]:
+    def _get_ocr_config(self) -> dict[str, Any]:
         """Get OCR configuration."""
         return self.ocr_config

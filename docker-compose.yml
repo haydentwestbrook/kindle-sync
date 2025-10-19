@@ -7,12 +7,12 @@ services:
       dockerfile: Dockerfile
     container_name: kindle-sync
     restart: unless-stopped
-    
+
     # Environment variables
     environment:
       - PYTHONUNBUFFERED=1
       - TZ=America/New_York  # Change to your timezone
-    
+
     # Volume mounts
     volumes:
       # Mount your Obsidian vault
@@ -25,11 +25,11 @@ services:
       - ./backups:/app/backups:rw
       # Mount temp directory for processing
       - ./temp:/app/temp:rw
-    
+
     # Network configuration
     networks:
       - kindle-sync-network
-    
+
     # Resource limits (adjust based on your Pi's capabilities)
     deploy:
       resources:
@@ -39,7 +39,7 @@ services:
         reservations:
           memory: 256M
           cpus: '0.25'
-    
+
     # Health check
     healthcheck:
       test: ["CMD", "python", "-c", "import sys; sys.exit(0)"]
@@ -47,7 +47,7 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-    
+
     # Logging configuration
     logging:
       driver: "json-file"

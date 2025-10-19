@@ -1,16 +1,13 @@
 """Tests for input validation and sanitization."""
 
 import tempfile
-from unittest.mock import MagicMock, patch
 
 import pytest
 from pathlib import Path
 
-from src.core.exceptions import ValidationError
 from src.security.validation import (
     FileValidationRequest,
     FileValidator,
-    ValidationResult,
 )
 
 

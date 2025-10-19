@@ -3,12 +3,11 @@
 import hashlib
 import os
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Union
 
 from loguru import logger
 from pathlib import Path
 
-from ..core.exceptions import ErrorSeverity, ValidationError
+from ..core.exceptions import ValidationError
 
 # Try to import magic, fallback to None if not available
 try:
@@ -41,12 +40,12 @@ class ValidationResult:
     """Result of file validation."""
 
     valid: bool
-    file_path: Optional[Path] = None
-    error: Optional[str] = None
-    checksum: Optional[str] = None
-    file_size: Optional[int] = None
-    mime_type: Optional[str] = None
-    warnings: List[str] = None
+    file_path: Path | None = None
+    error: str | None = None
+    checksum: str | None = None
+    file_size: int | None = None
+    mime_type: str | None = None
+    warnings: list[str] = None
 
     def __post_init__(self):
         if self.warnings is None:
@@ -60,8 +59,8 @@ class FileValidationRequest:
         self,
         file_path: Path,
         max_size_mb: int = 50,
-        allowed_extensions: List[str] = None,
-        allowed_mime_types: List[str] = None,
+        allowed_extensions: list[str] = None,
+        allowed_mime_types: list[str] = None,
         require_checksum: bool = True,
         check_security: bool = True,
     ):
@@ -251,7 +250,7 @@ class FileValidator:
 
     def _validate_content(
         self, file_path: Path, mime_type: str
-    ) -> tuple[bool, List[str]]:
+    ) -> tuple[bool, list[str]]:
         """
         Validate file content integrity.
 
@@ -276,7 +275,7 @@ class FileValidator:
         except Exception as e:
             return False, [f"Content validation failed: {e}"]
 
-    def _validate_pdf_content(self, file_path: Path) -> tuple[bool, List[str]]:
+    def _validate_pdf_content(self, file_path: Path) -> tuple[bool, list[str]]:
         """Validate PDF content."""
         warnings = []
 
@@ -300,12 +299,12 @@ class FileValidator:
         except Exception as e:
             return False, [f"PDF validation failed: {e}"]
 
-    def _validate_markdown_content(self, file_path: Path) -> tuple[bool, List[str]]:
+    def _validate_markdown_content(self, file_path: Path) -> tuple[bool, list[str]]:
         """Validate Markdown content."""
         warnings = []
 
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 content = f.read()
 
                 # Check for common Markdown issues
@@ -329,12 +328,12 @@ class FileValidator:
         except Exception as e:
             return False, [f"Markdown validation failed: {e}"]
 
-    def _validate_text_content(self, file_path: Path) -> tuple[bool, List[str]]:
+    def _validate_text_content(self, file_path: Path) -> tuple[bool, list[str]]:
         """Validate plain text content."""
         warnings = []
 
         try:
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 content = f.read()
 
                 if len(content.strip()) == 0:
@@ -347,7 +346,7 @@ class FileValidator:
         except Exception as e:
             return False, [f"Text validation failed: {e}"]
 
-    def _validate_security(self, file_path: Path) -> tuple[bool, List[str]]:
+    def _validate_security(self, file_path: Path) -> tuple[bool, list[str]]:
         """
         Basic security validation.
 
@@ -396,7 +395,7 @@ class FileValidator:
         except Exception as e:
             return False, [f"Security validation failed: {e}"]
 
-    def validate_file_path(self, file_path: Union[str, Path]) -> bool:
+    def validate_file_path(self, file_path: str | Path) -> bool:
         """
         Validate file path for security.
 

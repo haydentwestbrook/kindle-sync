@@ -3,13 +3,13 @@
 import json
 from contextlib import contextmanager
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from loguru import logger
 from pathlib import Path
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
 from ..core.exceptions import ConfigurationError, ErrorSeverity
 from .models import (
@@ -105,8 +105,8 @@ class DatabaseManager:
         file_size: int,
         file_type: str,
         status: ProcessingStatus,
-        processing_time_ms: Optional[int] = None,
-        error_message: Optional[str] = None,
+        processing_time_ms: int | None = None,
+        error_message: str | None = None,
         retry_count: int = 0,
     ) -> int:
         """Record a file processing attempt."""
@@ -149,9 +149,9 @@ class DatabaseManager:
         file_id: int,
         operation_type: str,
         status: ProcessingStatus,
-        processing_time_ms: Optional[int] = None,
-        error_message: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        processing_time_ms: int | None = None,
+        error_message: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> int:
         """Record an individual file operation."""
         with self.get_session() as session:
@@ -167,14 +167,14 @@ class DatabaseManager:
             session.flush()
             return operation.id
 
-    def get_file_processing_history(self, file_path: str) -> Optional[ProcessedFile]:
+    def get_file_processing_history(self, file_path: str) -> ProcessedFile | None:
         """Get processing history for a specific file."""
         with self.get_session() as session:
             return session.query(ProcessedFile).filter_by(file_path=file_path).first()
 
     def get_recent_files(
-        self, limit: int = 100, status: Optional[ProcessingStatus] = None
-    ) -> List[ProcessedFile]:
+        self, limit: int = 100, status: ProcessingStatus | None = None
+    ) -> list[ProcessedFile]:
         """Get recently processed files."""
         with self.get_session() as session:
             query = session.query(ProcessedFile).order_by(
@@ -186,7 +186,7 @@ class DatabaseManager:
 
             return query.limit(limit).all()
 
-    def get_files_by_status(self, status: ProcessingStatus) -> List[ProcessedFile]:
+    def get_files_by_status(self, status: ProcessingStatus) -> list[ProcessedFile]:
         """Get all files with a specific status."""
         with self.get_session() as session:
             return session.query(ProcessedFile).filter_by(status=status).all()
@@ -198,8 +198,8 @@ class DatabaseManager:
         file_path: str,
         file_hash: str,
         priority: int = 0,
-        scheduled_for: Optional[datetime] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        scheduled_for: datetime | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> int:
         """Add a file to the processing queue."""
         with self.get_session() as session:
@@ -228,7 +228,7 @@ class DatabaseManager:
                 session.flush()
                 return queue_item.id
 
-    def get_next_queue_item(self) -> Optional[ProcessingQueue]:
+    def get_next_queue_item(self) -> ProcessingQueue | None:
         """Get the next item from the processing queue."""
         with self.get_session() as session:
             now = datetime.utcnow()
@@ -257,8 +257,8 @@ class DatabaseManager:
         self,
         metric_name: str,
         metric_value: float,
-        metric_unit: Optional[str] = None,
-        tags: Optional[Dict[str, str]] = None,
+        metric_unit: str | None = None,
+        tags: dict[str, str] | None = None,
     ):
         """Record a system metric."""
         with self.get_session() as session:
@@ -273,10 +273,10 @@ class DatabaseManager:
     def get_metrics(
         self,
         metric_name: str,
-        start_time: Optional[datetime] = None,
-        end_time: Optional[datetime] = None,
+        start_time: datetime | None = None,
+        end_time: datetime | None = None,
         limit: int = 1000,
-    ) -> List[SystemMetrics]:
+    ) -> list[SystemMetrics]:
         """Get metrics for a specific metric name."""
         with self.get_session() as session:
             query = session.query(SystemMetrics).filter_by(metric_name=metric_name)
@@ -288,7 +288,7 @@ class DatabaseManager:
 
             return query.order_by(SystemMetrics.timestamp.desc()).limit(limit).all()
 
-    def get_latest_metric(self, metric_name: str) -> Optional[SystemMetrics]:
+    def get_latest_metric(self, metric_name: str) -> SystemMetrics | None:
         """Get the latest metric value for a specific metric name."""
         with self.get_session() as session:
             return (
@@ -304,9 +304,9 @@ class DatabaseManager:
         self,
         check_name: str,
         status: str,
-        response_time_ms: Optional[int] = None,
-        error_message: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        response_time_ms: int | None = None,
+        error_message: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ):
         """Record a health check result."""
         with self.get_session() as session:
@@ -321,7 +321,7 @@ class DatabaseManager:
 
     def get_health_check_history(
         self, check_name: str, limit: int = 100
-    ) -> List[HealthCheck]:
+    ) -> list[HealthCheck]:
         """Get health check history for a specific check."""
         with self.get_session() as session:
             return (
@@ -332,7 +332,7 @@ class DatabaseManager:
                 .all()
             )
 
-    def get_latest_health_check(self, check_name: str) -> Optional[HealthCheck]:
+    def get_latest_health_check(self, check_name: str) -> HealthCheck | None:
         """Get the latest health check result for a specific check."""
         with self.get_session() as session:
             return (
@@ -344,7 +344,7 @@ class DatabaseManager:
 
     # Statistics and reporting
 
-    def get_processing_statistics(self, days: int = 7) -> Dict[str, Any]:
+    def get_processing_statistics(self, days: int = 7) -> dict[str, Any]:
         """Get processing statistics for the last N days."""
         with self.get_session() as session:
             start_date = datetime.utcnow() - timedelta(days=days)
@@ -411,7 +411,7 @@ class DatabaseManager:
                 f"Cleaned up {metrics_deleted} old metrics and {health_checks_deleted} old health checks"
             )
 
-    def get_database_info(self) -> Dict[str, Any]:
+    def get_database_info(self) -> dict[str, Any]:
         """Get database information and statistics."""
         with self.get_session() as session:
             # Table sizes

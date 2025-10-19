@@ -6,7 +6,6 @@ the application meets performance requirements.
 """
 
 import tempfile
-import time
 from unittest.mock import Mock, patch
 
 import pytest

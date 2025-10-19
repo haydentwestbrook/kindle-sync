@@ -26,10 +26,10 @@ This document provides operational procedures for managing the Kindle Sync appli
    ```bash
    # Deploy using the deployment script
    ./scripts/deploy.sh deploy
-   
+
    # Verify deployment
    ./scripts/deploy.sh status
-   
+
    # Check health endpoint
    curl http://localhost:8080/health
    ```

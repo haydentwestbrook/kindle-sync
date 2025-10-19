@@ -2,11 +2,11 @@
 
 import time
 from functools import wraps
-from typing import Any, Callable, Optional, Tuple, Type
+from typing import Any
+from collections.abc import Callable
 
 from loguru import logger
 
-from .exceptions import ErrorSeverity, KindleSyncError
 
 
 def with_retry(
@@ -14,7 +14,7 @@ def with_retry(
     wait_multiplier: float = 1.0,
     wait_min: float = 1.0,
     wait_max: float = 10.0,
-    retry_exceptions: Tuple[Type[Exception], ...] = (Exception,),
+    retry_exceptions: tuple[type[Exception], ...] = (Exception,),
     backoff_factor: float = 2.0,
     jitter: bool = True,
 ) -> Callable:

@@ -3,10 +3,8 @@
 import email
 import imaplib
 import re
-import ssl
 from datetime import datetime, timedelta
 from email.header import decode_header
-from typing import List, Optional, Tuple
 
 import requests
 from loguru import logger
@@ -68,7 +66,7 @@ class EmailReceiver:
         processed_emails = set()
         try:
             if self.processed_emails_file.exists():
-                with open(self.processed_emails_file, "r") as f:
+                with open(self.processed_emails_file) as f:
                     for line in f:
                         line = line.strip()
                         if line:
@@ -148,7 +146,7 @@ class EmailReceiver:
         """Check if email receiving is enabled."""
         return self.config.get("email_receiving.enabled", False)
 
-    def connect_to_imap(self) -> Optional[imaplib.IMAP4_SSL]:
+    def connect_to_imap(self) -> imaplib.IMAP4_SSL | None:
         """Connect to IMAP server."""
         try:
             # Connect to IMAP server
@@ -173,7 +171,7 @@ class EmailReceiver:
             logger.error(f"Failed to connect to IMAP server: {e}")
             raise EmailServiceError(f"Failed to connect to IMAP server: {e}") from e
 
-    def check_for_new_emails(self) -> List[Path]:
+    def check_for_new_emails(self) -> list[Path]:
         """Check for new emails with PDF attachments from approved senders."""
         if not self.is_enabled():
             logger.debug("Email receiving is disabled")
@@ -250,7 +248,7 @@ class EmailReceiver:
                     logger.info(f"Email {i}/{len(email_ids)}: From '{sender}'")
 
                     if not self._is_approved_sender(sender):
-                        logger.info(f"  → Rejected: Not from approved sender")
+                        logger.info("  → Rejected: Not from approved sender")
                         continue
 
                     approved_emails_found += 1
@@ -264,7 +262,7 @@ class EmailReceiver:
                         logger.info(f"  → Found {len(pdf_files)} PDF files in email")
                         processed_files.extend(pdf_files)
                     else:
-                        logger.info(f"  → No PDF files found in email")
+                        logger.info("  → No PDF files found in email")
 
                     # Mark email as processed to prevent duplicates (if enabled)
                     if self.prevent_duplicates:
@@ -332,7 +330,7 @@ class EmailReceiver:
 
         return False
 
-    def _process_email_attachments(self, email_message, email_id: bytes) -> List[Path]:
+    def _process_email_attachments(self, email_message, email_id: bytes) -> list[Path]:
         """Process email attachments and download links, save PDF files."""
         processed_files = []
 
@@ -341,7 +339,7 @@ class EmailReceiver:
             subject = self._decode_header(email_message.get("Subject", "No Subject"))
             logger.info(f"Processing email: {subject}")
 
-            logger.debug(f"  → Checking email for PDFs...")
+            logger.debug("  → Checking email for PDFs...")
 
             # First, try to find download links in email body
             download_links = self._extract_download_links(email_message)
@@ -364,7 +362,7 @@ class EmailReceiver:
                         logger.error(f"  → Failed to download PDF from link {i}: {e}")
 
             # Also check for traditional attachments
-            logger.debug(f"  → Checking for traditional attachments...")
+            logger.debug("  → Checking for traditional attachments...")
             attachment_count = 0
             pdf_attachment_count = 0
 
@@ -432,7 +430,7 @@ class EmailReceiver:
 
     def _save_pdf_attachment(
         self, part, filename: str, email_id: bytes
-    ) -> Optional[Path]:
+    ) -> Path | None:
         """Save PDF attachment to sync folder."""
         try:
             # Generate unique filename with timestamp
@@ -464,9 +462,9 @@ class EmailReceiver:
                 f"Failed to save PDF attachment: {e}", severity=ErrorSeverity.MEDIUM
             ) from e
 
-    def _extract_download_links(self, email_message) -> List[str]:
+    def _extract_download_links(self, email_message) -> list[str]:
         """Extract download links from email body."""
-        download_links: List[str] = []
+        download_links: list[str] = []
 
         try:
             # Get email body
@@ -537,7 +535,7 @@ class EmailReceiver:
 
         return body
 
-    def _download_pdf_from_link(self, url: str, email_id: bytes) -> Optional[Path]:
+    def _download_pdf_from_link(self, url: str, email_id: bytes) -> Path | None:
         """Download PDF from a download link."""
         try:
             logger.info(f"Downloading PDF from: {url}")
@@ -729,7 +727,7 @@ class EmailReceiver:
                 "email_receiving.duplicate_tracking_file"
             )
             if tracking_file_path and Path(tracking_file_path).exists():
-                with open(tracking_file_path, "r") as f:
+                with open(tracking_file_path) as f:
                     for line in f:
                         if line.strip() == email_id:
                             return True

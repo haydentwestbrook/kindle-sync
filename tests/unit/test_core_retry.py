@@ -1,11 +1,9 @@
 """Tests for retry mechanisms."""
 
-import time
-from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.core.exceptions import EmailServiceError, FileProcessingError
+from src.core.exceptions import FileProcessingError
 from src.core.retry import retry_on_file_error, retry_on_network_error, with_retry
 
 

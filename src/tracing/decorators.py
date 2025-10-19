@@ -6,15 +6,15 @@ Provides decorators to automatically create trace spans for functions and method
 
 import asyncio
 import functools
-from typing import Any, Callable, Dict, Optional, Union
+from typing import Any
+from collections.abc import Callable
 
-from loguru import logger
 from opentelemetry import trace
 
 
 def trace_function(
-    operation_name: Optional[str] = None,
-    attributes: Optional[Dict[str, Any]] = None,
+    operation_name: str | None = None,
+    attributes: dict[str, Any] | None = None,
     record_exceptions: bool = True,
 ) -> Callable:
     """
@@ -62,8 +62,8 @@ def trace_function(
 
 
 def trace_async_function(
-    operation_name: Optional[str] = None,
-    attributes: Optional[Dict[str, Any]] = None,
+    operation_name: str | None = None,
+    attributes: dict[str, Any] | None = None,
     record_exceptions: bool = True,
 ) -> Callable:
     """
@@ -112,8 +112,8 @@ def trace_async_function(
 
 
 def trace_class_methods(
-    operation_name_prefix: Optional[str] = None,
-    exclude_methods: Optional[set] = None,
+    operation_name_prefix: str | None = None,
+    exclude_methods: set | None = None,
     include_private: bool = False,
 ) -> Callable:
     """

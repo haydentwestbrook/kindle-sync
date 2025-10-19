@@ -114,19 +114,19 @@ backup_data() {
     print_header "Backing Up Data"
     BACKUP_DIR="backups/$(date +%Y%m%d_%H%M%S)"
     mkdir -p "$BACKUP_DIR"
-    
+
     # Backup logs
     if [ -d "logs" ]; then
         cp -r logs "$BACKUP_DIR/"
         print_status "Logs backed up to $BACKUP_DIR"
     fi
-    
+
     # Backup configuration
     if [ -f "config.yaml" ]; then
         cp config.yaml "$BACKUP_DIR/"
         print_status "Configuration backed up to $BACKUP_DIR"
     fi
-    
+
     print_status "Backup completed: $BACKUP_DIR"
 }
 

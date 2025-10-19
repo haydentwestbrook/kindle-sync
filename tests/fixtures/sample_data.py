@@ -1,6 +1,6 @@
 """Sample data fixtures for testing."""
 
-from typing import Any, Dict
+from typing import Any
 
 import yaml
 from pathlib import Path
@@ -291,7 +291,7 @@ startxref
     }
 
     @classmethod
-    def get_sample_config(cls, **overrides) -> Dict[str, Any]:
+    def get_sample_config(cls, **overrides) -> dict[str, Any]:
         """Get sample configuration with optional overrides."""
         config = cls.SAMPLE_CONFIG.copy()
 
@@ -309,7 +309,7 @@ startxref
         return config
 
     @classmethod
-    def create_sample_files(cls, base_path: Path) -> Dict[str, Path]:
+    def create_sample_files(cls, base_path: Path) -> dict[str, Path]:
         """Create sample files in the given directory."""
         files = {}
 
@@ -332,11 +332,11 @@ startxref
         return files
 
     @classmethod
-    def create_sample_directory_structure(cls, base_path: Path) -> Dict[str, Path]:
+    def create_sample_directory_structure(cls, base_path: Path) -> dict[str, Path]:
         """Create sample directory structure."""
         paths = {}
 
-        def create_structure(structure: Dict, current_path: Path):
+        def create_structure(structure: dict, current_path: Path):
             for name, content in structure.items():
                 item_path = current_path / name
                 if isinstance(content, dict):
@@ -351,7 +351,7 @@ startxref
         return paths
 
     @classmethod
-    def get_sample_ocr_result(cls, index: int = 0) -> Dict[str, Any]:
+    def get_sample_ocr_result(cls, index: int = 0) -> dict[str, Any]:
         """Get a sample OCR result by index."""
         return cls.SAMPLE_OCR_RESULTS[index % len(cls.SAMPLE_OCR_RESULTS)]
 
@@ -368,7 +368,7 @@ startxref
         return cls.SAMPLE_ERRORS[index % len(cls.SAMPLE_ERRORS)]
 
     @classmethod
-    def get_sample_statistics(cls, **overrides) -> Dict[str, Any]:
+    def get_sample_statistics(cls, **overrides) -> dict[str, Any]:
         """Get sample statistics with optional overrides."""
         stats = cls.SAMPLE_STATISTICS.copy()
         stats.update(overrides)

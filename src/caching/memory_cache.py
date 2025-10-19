@@ -4,11 +4,10 @@ In-memory cache implementation for the Kindle Sync application.
 Provides a simple in-memory cache with TTL support.
 """
 
-import asyncio
 import time
 from collections import OrderedDict
 from threading import RLock
-from typing import Any, Dict, Optional
+from typing import Any
 
 from loguru import logger
 
@@ -26,11 +25,11 @@ class MemoryCache:
         """
         self.max_size = max_size
         self.default_ttl = default_ttl
-        self._cache: OrderedDict[str, Dict[str, Any]] = OrderedDict()
+        self._cache: OrderedDict[str, dict[str, Any]] = OrderedDict()
         self._lock = RLock()
         self._stats = {"hits": 0, "misses": 0, "sets": 0, "deletes": 0, "evictions": 0}
 
-    def _is_expired(self, item: Dict[str, Any]) -> bool:
+    def _is_expired(self, item: dict[str, Any]) -> bool:
         """Check if a cache item has expired."""
         return time.time() > item["expires_at"]
 
@@ -53,7 +52,7 @@ class MemoryCache:
             key, _ = self._cache.popitem(last=False)
             self._stats["evictions"] += 1
 
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """
         Get a value from the cache.
 
@@ -83,7 +82,7 @@ class MemoryCache:
 
             return item["value"]
 
-    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+    async def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
         """
         Set a value in the cache.
 
@@ -183,7 +182,7 @@ class MemoryCache:
             logger.error(f"Memory cache clear error: {e}")
             return False
 
-    async def get_stats(self) -> Dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         """
         Get cache statistics.
 
@@ -213,7 +212,7 @@ class MemoryCache:
                 "default_ttl": self.default_ttl,
             }
 
-    def get_memory_usage(self) -> Dict[str, Any]:
+    def get_memory_usage(self) -> dict[str, Any]:
         """
         Get memory usage information.
 

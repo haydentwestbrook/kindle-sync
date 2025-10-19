@@ -1,21 +1,8 @@
 {
   "dashboard": {
     "id": null,
-    "title": "Kindle Sync Monitoring Dashboard",
-    "tags": ["kindle-sync", "monitoring"],
-    "style": "dark",
-    "timezone": "browser",
     "panels": [
       {
-        "id": 1,
-        "title": "System Health Status",
-        "type": "stat",
-        "targets": [
-          {
-            "expr": "up{job=\"kindle-sync\"}",
-            "legendFormat": "Service Status"
-          }
-        ],
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -40,52 +27,52 @@
           "w": 6,
           "x": 0,
           "y": 0
-        }
+        },
+        "id": 1,
+        "targets": [
+          {
+            "expr": "up{job=\"kindle-sync\"}",
+            "legendFormat": "Service Status"
+          }
+        ],
+        "title": "System Health Status",
+        "type": "stat"
       },
       {
+        "gridPos": {
+          "h": 8,
+          "w": 6,
+          "x": 6,
+          "y": 0
+        },
         "id": 2,
-        "title": "Files Processed",
-        "type": "stat",
         "targets": [
           {
             "expr": "kindle_sync_files_processed_total",
             "legendFormat": "Total Files"
           }
         ],
+        "title": "Files Processed",
+        "type": "stat"
+      },
+      {
         "gridPos": {
           "h": 8,
           "w": 6,
-          "x": 6,
+          "x": 12,
           "y": 0
-        }
-      },
-      {
+        },
         "id": 3,
-        "title": "Processing Rate",
-        "type": "stat",
         "targets": [
           {
             "expr": "rate(kindle_sync_files_processed_total[5m])",
             "legendFormat": "Files/sec"
           }
         ],
-        "gridPos": {
-          "h": 8,
-          "w": 6,
-          "x": 12,
-          "y": 0
-        }
+        "title": "Processing Rate",
+        "type": "stat"
       },
       {
-        "id": 4,
-        "title": "Error Rate",
-        "type": "stat",
-        "targets": [
-          {
-            "expr": "rate(kindle_sync_errors_total[5m])",
-            "legendFormat": "Errors/sec"
-          }
-        ],
         "fieldConfig": {
           "defaults": {
             "color": {
@@ -114,12 +101,25 @@
           "w": 6,
           "x": 18,
           "y": 0
-        }
+        },
+        "id": 4,
+        "targets": [
+          {
+            "expr": "rate(kindle_sync_errors_total[5m])",
+            "legendFormat": "Errors/sec"
+          }
+        ],
+        "title": "Error Rate",
+        "type": "stat"
       },
       {
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 8
+        },
         "id": 5,
-        "title": "File Processing Time",
-        "type": "graph",
         "targets": [
           {
             "expr": "histogram_quantile(0.50, rate(kindle_sync_file_processing_duration_seconds_bucket[5m]))",
@@ -134,46 +134,46 @@
             "legendFormat": "99th percentile"
           }
         ],
+        "title": "File Processing Time",
+        "type": "graph",
         "yAxes": [
           {
             "label": "Processing Time (seconds)",
             "min": 0
           }
-        ],
+        ]
+      },
+      {
         "gridPos": {
           "h": 8,
           "w": 12,
-          "x": 0,
+          "x": 12,
           "y": 8
-        }
-      },
-      {
+        },
         "id": 6,
-        "title": "Memory Usage",
-        "type": "graph",
         "targets": [
           {
             "expr": "kindle_sync_memory_usage_bytes",
             "legendFormat": "Memory Usage"
           }
         ],
+        "title": "Memory Usage",
+        "type": "graph",
         "yAxes": [
           {
             "label": "Bytes",
             "min": 0
           }
-        ],
+        ]
+      },
+      {
         "gridPos": {
           "h": 8,
           "w": 12,
-          "x": 12,
-          "y": 8
-        }
-      },
-      {
+          "x": 0,
+          "y": 16
+        },
         "id": 7,
-        "title": "Email Operations",
-        "type": "graph",
         "targets": [
           {
             "expr": "rate(kindle_sync_emails_sent_total[5m])",
@@ -184,71 +184,74 @@
             "legendFormat": "Emails Received/sec"
           }
         ],
+        "title": "Email Operations",
+        "type": "graph"
+      },
+      {
         "gridPos": {
           "h": 8,
           "w": 12,
-          "x": 0,
+          "x": 12,
           "y": 16
-        }
-      },
-      {
+        },
         "id": 8,
-        "title": "Database Operations",
-        "type": "graph",
         "targets": [
           {
             "expr": "rate(kindle_sync_database_operations_total[5m])",
             "legendFormat": "DB Operations/sec"
           }
         ],
+        "title": "Database Operations",
+        "type": "graph"
+      },
+      {
         "gridPos": {
           "h": 8,
           "w": 12,
-          "x": 12,
-          "y": 16
-        }
-      },
-      {
+          "x": 0,
+          "y": 24
+        },
         "id": 9,
-        "title": "Active Processing Tasks",
-        "type": "graph",
         "targets": [
           {
             "expr": "kindle_sync_active_processing_tasks",
             "legendFormat": "Active Tasks"
           }
         ],
+        "title": "Active Processing Tasks",
+        "type": "graph"
+      },
+      {
         "gridPos": {
           "h": 8,
           "w": 12,
-          "x": 0,
+          "x": 12,
           "y": 24
-        }
-      },
-      {
+        },
         "id": 10,
-        "title": "Queue Size",
-        "type": "graph",
         "targets": [
           {
             "expr": "kindle_sync_processing_queue_size",
             "legendFormat": "Queue Size"
           }
         ],
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 12,
-          "y": 24
-        }
+        "title": "Queue Size",
+        "type": "graph"
       }
+    ],
+    "refresh": "30s",
+    "schemaVersion": 27,
+    "style": "dark",
+    "tags": [
+      "kindle-sync",
+      "monitoring"
     ],
     "time": {
       "from": "now-1h",
       "to": "now"
     },
-    "refresh": "30s",
-    "schemaVersion": 27,
+    "timezone": "browser",
+    "title": "Kindle Sync Monitoring Dashboard",
     "version": 1
   }
 }

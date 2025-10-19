@@ -7,7 +7,8 @@ Provides decorators for automatic caching of function results.
 import functools
 import hashlib
 import inspect
-from typing import Any, Callable, Optional, Union
+from typing import Any
+from collections.abc import Callable
 
 from loguru import logger
 
@@ -15,8 +16,8 @@ from .cache_manager import get_cache
 
 
 def cached(
-    ttl: Optional[int] = None,
-    key_prefix: Optional[str] = None,
+    ttl: int | None = None,
+    key_prefix: str | None = None,
     cache_none: bool = False,
 ) -> Callable:
     """
@@ -103,7 +104,7 @@ def cached(
 
 
 def cache_invalidate(
-    pattern: Optional[str] = None, key_prefix: Optional[str] = None
+    pattern: str | None = None, key_prefix: str | None = None
 ) -> Callable:
     """
     Decorator to invalidate cache entries after function execution.
@@ -159,7 +160,7 @@ def cache_invalidate(
 
 
 def _generate_cache_key(
-    func: Callable, args: tuple, kwargs: dict, key_prefix: Optional[str] = None
+    func: Callable, args: tuple, kwargs: dict, key_prefix: str | None = None
 ) -> str:
     """
     Generate a cache key for a function call.

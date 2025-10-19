@@ -4,15 +4,13 @@ Unit tests for HealthChecker.
 Tests the health check functionality for system components.
 """
 
-import os
 import tempfile
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 from pathlib import Path
 
 from src.config import Config
-from src.core.exceptions import ErrorSeverity, KindleSyncError
 from src.database.manager import DatabaseManager
 from src.monitoring.health_checks import HealthChecker
 

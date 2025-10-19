@@ -1,6 +1,5 @@
 """Tests for core exception handling."""
 
-import pytest
 
 from src.core.exceptions import (
     ConfigurationError,

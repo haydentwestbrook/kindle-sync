@@ -7,7 +7,7 @@ Tracks user behavior and engagement metrics.
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from loguru import logger
 
@@ -19,7 +19,7 @@ class UserActivity:
     user_id: str
     timestamp: datetime
     activity_type: str
-    metadata: Dict[str, Any]
+    metadata: dict[str, Any]
 
 
 class UserAnalytics:
@@ -27,9 +27,9 @@ class UserAnalytics:
 
     def __init__(self):
         """Initialize user analytics."""
-        self.user_activities: List[UserActivity] = []
-        self.user_sessions: Dict[str, List[datetime]] = defaultdict(list)
-        self.user_metrics: Dict[str, Dict[str, Any]] = defaultdict(dict)
+        self.user_activities: list[UserActivity] = []
+        self.user_sessions: dict[str, list[datetime]] = defaultdict(list)
+        self.user_metrics: dict[str, dict[str, Any]] = defaultdict(dict)
 
         logger.info("User analytics initialized")
 
@@ -37,7 +37,7 @@ class UserAnalytics:
         self,
         user_id: str,
         activity_type: str,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
     ):
         """
         Record user activity.
@@ -59,7 +59,7 @@ class UserAnalytics:
 
         logger.debug(f"Recorded activity for user {user_id}: {activity_type}")
 
-    def get_user_engagement(self, user_id: str, days: int = 30) -> Dict[str, Any]:
+    def get_user_engagement(self, user_id: str, days: int = 30) -> dict[str, Any]:
         """
         Get user engagement metrics.
 
@@ -92,7 +92,7 @@ class UserAnalytics:
         # Calculate metrics
         total_activities = len(user_activities)
         active_days = len(
-            set(activity.timestamp.date() for activity in user_activities)
+            {activity.timestamp.date() for activity in user_activities}
         )
         average_activities_per_day = total_activities / max(1, active_days)
 
@@ -120,7 +120,7 @@ class UserAnalytics:
             "activity_breakdown": dict(activity_counts),
         }
 
-    def get_daily_active_users(self, date: Optional[datetime] = None) -> int:
+    def get_daily_active_users(self, date: datetime | None = None) -> int:
         """
         Get number of daily active users for a specific date.
 
@@ -142,7 +142,7 @@ class UserAnalytics:
 
     def get_retention_metrics(
         self, cohort_date: datetime, days: int = 7
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Calculate user retention metrics for a cohort.
 
@@ -189,7 +189,7 @@ class UserAnalytics:
             "retention_rates": retention_rates,
         }
 
-    def get_activity_summary(self, days: int = 30) -> Dict[str, Any]:
+    def get_activity_summary(self, days: int = 30) -> dict[str, Any]:
         """
         Get overall activity summary.
 
@@ -219,7 +219,7 @@ class UserAnalytics:
 
         # Calculate metrics
         total_activities = len(recent_activities)
-        unique_users = len(set(activity.user_id for activity in recent_activities))
+        unique_users = len({activity.user_id for activity in recent_activities})
         average_activities_per_user = total_activities / max(1, unique_users)
 
         # Most active users

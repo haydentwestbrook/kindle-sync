@@ -4,7 +4,6 @@ import shutil
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import List, Optional
 
 import smtplib
 from loguru import logger
@@ -29,7 +28,7 @@ class KindleSync:
 
         logger.info("Kindle sync initialized")
 
-    def send_pdf_to_kindle(self, pdf_path: Path, subject: Optional[str] = None) -> bool:
+    def send_pdf_to_kindle(self, pdf_path: Path, subject: str | None = None) -> bool:
         """Send a PDF file to Kindle via email."""
         try:
             # Validate file before processing
@@ -108,7 +107,7 @@ class KindleSync:
             )
 
     def copy_to_kindle_usb(
-        self, pdf_path: Path, kindle_path: Optional[Path] = None
+        self, pdf_path: Path, kindle_path: Path | None = None
     ) -> bool:
         """Copy PDF to Kindle via USB connection."""
         try:
@@ -140,7 +139,7 @@ class KindleSync:
             return False
 
     @retry_on_file_error(max_attempts=3, wait_min=0.5, wait_max=5.0)
-    def backup_file(self, file_path: Path) -> Optional[Path]:
+    def backup_file(self, file_path: Path) -> Path | None:
         """Create a backup of a file."""
         try:
             if not self.sync_config.get("backup_originals", True):
@@ -186,7 +185,7 @@ class KindleSync:
                 severity=ErrorSeverity.MEDIUM,
             )
 
-    def get_kindle_documents(self, kindle_path: Optional[Path] = None) -> List[Path]:
+    def get_kindle_documents(self, kindle_path: Path | None = None) -> list[Path]:
         """Get list of documents from Kindle."""
         try:
             if kindle_path is None:
@@ -211,8 +210,8 @@ class KindleSync:
             return []
 
     def sync_from_kindle(
-        self, kindle_path: Optional[Path] = None, sync_folder: Optional[Path] = None
-    ) -> List[Path]:
+        self, kindle_path: Path | None = None, sync_folder: Path | None = None
+    ) -> list[Path]:
         """Sync documents from Kindle to sync folder."""
         try:
             if sync_folder is None:

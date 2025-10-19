@@ -126,7 +126,7 @@ fi
 get_config() {
     local key="$1"
     local default="$2"
-    
+
     if [ -n "$CONFIG_FILE" ] && [ -f "$CONFIG_FILE" ] && command -v yq >/dev/null 2>&1; then
         yq eval "$key" "$CONFIG_FILE" 2>/dev/null || echo "$default"
     else
@@ -140,9 +140,9 @@ if [ -n "$CONFIG_FILE" ]; then
         print_error "Configuration file not found: $CONFIG_FILE"
         exit 1
     fi
-    
+
     print_status "Loading configuration from: $CONFIG_FILE"
-    
+
     # Override command line arguments with config file values
     PI_USER=$(get_config '.deployment.pi.user' "$PI_USER")
     PI_PORT=$(get_config '.deployment.pi.port' "$PI_PORT")
@@ -151,7 +151,7 @@ if [ -n "$CONFIG_FILE" ]; then
     SKIP_DOCKER=$(get_config '.deployment.options.skip_docker' "$SKIP_DOCKER")
     SKIP_BUILD=$(get_config '.deployment.options.skip_build' "$SKIP_BUILD")
     SKIP_CONFIG=$(get_config '.deployment.options.skip_config' "$SKIP_CONFIG")
-    
+
     print_status "Configuration loaded:"
     print_status "  User: $PI_USER"
     print_status "  Port: $PI_PORT"
@@ -181,13 +181,13 @@ copy_to_pi() {
     local src="$1"
     local dst="$2"
     print_status "Copying $src to Pi:$dst"
-    
+
     local scp_cmd="scp -r"
     if [ -n "$SSH_KEY" ]; then
         scp_cmd="$scp_cmd -i $SSH_KEY"
     fi
     scp_cmd="$scp_cmd -P $PI_PORT $src $PI_USER@$PI_IP:$dst"
-    
+
     eval $scp_cmd
 }
 
@@ -201,7 +201,7 @@ check_command_on_pi() {
 deploy_to_pi() {
     print_header "Deploying Kindle Scribe Sync to Raspberry Pi"
     print_status "Target: $PI_USER@$PI_IP:$PI_DIR"
-    
+
     # Test SSH connection
     print_status "Testing SSH connection..."
     if ! run_on_pi "echo 'SSH connection successful'" >/dev/null 2>&1; then
@@ -213,17 +213,17 @@ deploy_to_pi() {
         exit 1
     fi
     print_status "SSH connection successful"
-    
+
     # Update system
     print_header "Updating Raspberry Pi System"
     run_on_pi "sudo apt update && sudo apt upgrade -y"
-    
+
     # Install Git if not present
     if ! check_command_on_pi "git"; then
         print_status "Installing Git..."
         run_on_pi "sudo apt install git -y"
     fi
-    
+
     # Clone or update repository
     print_header "Setting up Repository"
     if run_on_pi "[ -d '$PI_DIR' ]"; then
@@ -233,7 +233,7 @@ deploy_to_pi() {
         print_status "Cloning repository..."
         run_on_pi "git clone https://github.com/haydentwestbrook/kindle-sync.git $PI_DIR"
     fi
-    
+
     # Install Docker if not skipping
     if [ "$SKIP_DOCKER" = false ]; then
         print_header "Installing Docker"
@@ -244,23 +244,23 @@ deploy_to_pi() {
             print_status "Docker already installed"
         fi
     fi
-    
+
     # Build Docker image if not skipping
     if [ "$SKIP_BUILD" = false ]; then
         print_header "Building Docker Image"
         run_on_pi "cd $PI_DIR && docker-compose build"
     fi
-    
+
     # Set up configuration if not skipping
     if [ "$SKIP_CONFIG" = false ]; then
         print_header "Setting up Configuration"
-        
+
         # Create config if it doesn't exist
         if ! run_on_pi "[ -f '$PI_DIR/config.yaml' ]"; then
             print_status "Creating configuration file..."
             run_on_pi "cd $PI_DIR && cp config.yaml.example config.yaml"
         fi
-        
+
         # Create .env if it doesn't exist
         if ! run_on_pi "[ -f '$PI_DIR/.env' ]"; then
             print_status "Creating environment file..."
@@ -273,7 +273,7 @@ SMTP_USERNAME=your-email@gmail.com
 SMTP_PASSWORD=your-app-password
 EOF"
         fi
-        
+
         # Create directories
         print_status "Creating necessary directories..."
         run_on_pi "mkdir -p $PI_DIR/logs $PI_DIR/backups $PI_DIR/temp"
@@ -281,16 +281,16 @@ EOF"
         run_on_pi "mkdir -p /home/$PI_USER/obsidian-vault/'Kindle Sync'"
         run_on_pi "mkdir -p /home/$PI_USER/obsidian-vault/Templates"
         run_on_pi "mkdir -p /home/$PI_USER/obsidian-vault/Backups"
-        
+
         # Set permissions
         run_on_pi "sudo chown -R $PI_USER:$PI_USER $PI_DIR"
         run_on_pi "sudo chown -R $PI_USER:$PI_USER /home/$PI_USER/obsidian-vault"
     fi
-    
+
     # Make scripts executable
     print_status "Setting up scripts..."
     run_on_pi "cd $PI_DIR && chmod +x scripts/*.sh"
-    
+
     print_header "Deployment Complete!"
     print_status "Next steps:"
     print_status "1. SSH into your Pi: ssh $PI_USER@$PI_IP"

@@ -25,7 +25,7 @@ processing:
   ocr:
     language: "eng"                   # OCR language
     confidence_threshold: 60          # Minimum confidence for text extraction
-    
+
   # PDF Generation
   pdf:
     page_size: "A4"                   # Page size for generated PDFs
@@ -33,7 +33,7 @@ processing:
     font_family: "Times-Roman"        # Font for PDF generation
     font_size: 12                     # Base font size
     line_spacing: 1.2                 # Line spacing multiplier
-    
+
   # Markdown Processing
   markdown:
     extensions:                       # Markdown extensions to use
@@ -49,13 +49,13 @@ sync:
   auto_send_to_kindle: true           # Automatically send PDFs to Kindle
   backup_originals: true              # Keep backup of original files
   backup_folder: "Backups"            # Folder for backups
-  
+
 # File Patterns
 patterns:
   markdown_files: "*.md"              # Pattern for markdown files
   pdf_files: "*.pdf"                  # Pattern for PDF files
   image_files: "*.{png,jpg,jpeg}"     # Pattern for image files
-  
+
 # Logging
 logging:
   level: "INFO"                       # Logging level (DEBUG, INFO, WARNING, ERROR)

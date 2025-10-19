@@ -6,17 +6,18 @@ Provides decorators for automatic rate limiting of functions.
 
 import asyncio
 import functools
-from typing import Any, Callable, Optional, Union
+from typing import Any
+from collections.abc import Callable
 
 from loguru import logger
 
-from .rate_limiter import RateLimitResult, get_limiter
+from .rate_limiter import get_limiter
 
 
 def rate_limit(
     limit: int,
     window: int,
-    key_func: Optional[Callable] = None,
+    key_func: Callable | None = None,
     error_message: str = "Rate limit exceeded",
 ) -> Callable:
     """
@@ -94,7 +95,7 @@ def rate_limit(
 def rate_limit_async(
     limit: int,
     window: int,
-    key_func: Optional[Callable] = None,
+    key_func: Callable | None = None,
     error_message: str = "Rate limit exceeded",
 ) -> Callable:
     """
@@ -140,7 +141,7 @@ def rate_limit_async(
 def rate_limit_by_user(
     limit: int,
     window: int,
-    user_id_arg: Union[int, str] = 0,
+    user_id_arg: int | str = 0,
     error_message: str = "Rate limit exceeded",
 ) -> Callable:
     """
@@ -167,7 +168,7 @@ def rate_limit_by_user(
                 return f"user:{kwargs[user_id_arg]}"
 
         # Fallback to function name
-        return f"user:anonymous"
+        return "user:anonymous"
 
     return rate_limit(limit, window, key_func, error_message)
 
@@ -196,7 +197,7 @@ def rate_limit_by_ip(
                 return f"ip:{arg.remote_addr}"
 
         # Fallback to function name
-        return f"ip:unknown"
+        return "ip:unknown"
 
     return rate_limit(limit, window, key_func, error_message)
 
@@ -204,7 +205,7 @@ def rate_limit_by_ip(
 class RateLimitExceeded(Exception):
     """Exception raised when rate limit is exceeded."""
 
-    def __init__(self, message: str, retry_after: Optional[float] = None):
+    def __init__(self, message: str, retry_after: float | None = None):
         """
         Initialize rate limit exception.
 

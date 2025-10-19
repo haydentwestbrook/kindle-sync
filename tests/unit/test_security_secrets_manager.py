@@ -2,7 +2,7 @@
 
 import os
 import tempfile
-from unittest.mock import mock_open, patch
+from unittest.mock import patch
 
 import pytest
 from pathlib import Path

@@ -4,11 +4,10 @@ Rate limiting implementation for the Kindle Sync application.
 Provides rate limiting capabilities to prevent abuse and ensure fair usage.
 """
 
-import asyncio
 import time
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from typing import Any, Dict, Optional, Union
+from typing import Any
 
 from loguru import logger
 
@@ -22,7 +21,7 @@ class RateLimitResult:
     allowed: bool
     remaining: int
     reset_time: float
-    retry_after: Optional[float] = None
+    retry_after: float | None = None
 
 
 class RateLimiter(ABC):
@@ -47,7 +46,7 @@ class RateLimiter(ABC):
 class SlidingWindowRateLimiter(RateLimiter):
     """Rate limiter using sliding window algorithm."""
 
-    def __init__(self, cache_backend: Optional[Any] = None) -> None:
+    def __init__(self, cache_backend: Any | None = None) -> None:
         """
         Initialize sliding window rate limiter.
 
@@ -120,7 +119,7 @@ class SlidingWindowRateLimiter(RateLimiter):
 class TokenBucketRateLimiter(RateLimiter):
     """Rate limiter using token bucket algorithm."""
 
-    def __init__(self, cache_backend: Optional[Any] = None) -> None:
+    def __init__(self, cache_backend: Any | None = None) -> None:
         """
         Initialize token bucket rate limiter.
 
@@ -202,7 +201,7 @@ class TokenBucketRateLimiter(RateLimiter):
 class FixedWindowRateLimiter(RateLimiter):
     """Rate limiter using fixed window algorithm."""
 
-    def __init__(self, cache_backend: Optional[Any] = None) -> None:
+    def __init__(self, cache_backend: Any | None = None) -> None:
         """
         Initialize fixed window rate limiter.
 
@@ -264,11 +263,11 @@ class FixedWindowRateLimiter(RateLimiter):
 
 
 # Global rate limiter instance
-_rate_limiter: Optional[RateLimiter] = None
+_rate_limiter: RateLimiter | None = None
 
 
 def initialize_rate_limiter(
-    limiter_type: str = "sliding_window", cache_backend: Optional[Any] = None
+    limiter_type: str = "sliding_window", cache_backend: Any | None = None
 ) -> RateLimiter:
     """
     Initialize global rate limiter.
@@ -294,7 +293,7 @@ def initialize_rate_limiter(
     return _rate_limiter
 
 
-def get_rate_limiter() -> Optional[RateLimiter]:
+def get_rate_limiter() -> RateLimiter | None:
     """
     Get the global rate limiter instance.
 

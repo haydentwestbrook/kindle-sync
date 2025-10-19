@@ -147,35 +147,35 @@ sudo apt install -y \
 # Install Docker if not skipping
 if [ "$SKIP_DOCKER" = false ]; then
     print_header "Installing Docker"
-    
+
     if ! command -v docker &> /dev/null; then
         print_status "Installing Docker..."
-        
+
         # Install Docker
         curl -fsSL https://get.docker.com -o get-docker.sh
         sudo sh get-docker.sh
         rm get-docker.sh
-        
+
         # Add user to docker group
         sudo usermod -aG docker $USER
-        
+
         print_status "Docker installed successfully"
         print_warning "Please log out and log back in for Docker group changes to take effect"
     else
         print_status "Docker already installed"
     fi
-    
+
     # Install Docker Compose
     if ! command -v docker-compose &> /dev/null; then
         print_status "Installing Docker Compose..."
-        
+
         # Get latest version
         COMPOSE_VERSION=$(curl -s https://api.github.com/repos/docker/compose/releases/latest | grep 'tag_name' | cut -d\" -f4)
-        
+
         # Download and install
         sudo curl -L "https://github.com/docker/compose/releases/download/${COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
         sudo chmod +x /usr/local/bin/docker-compose
-        
+
         print_status "Docker Compose installed successfully"
     else
         print_status "Docker Compose already installed"
@@ -201,30 +201,30 @@ sudo chown -R $USER:$USER "$OBSIDIAN_PATH"
 # Set up configuration if not skipping
 if [ "$SKIP_CONFIG" = false ]; then
     print_header "Setting up Configuration"
-    
+
     # Create config.yaml if it doesn't exist
     if [ ! -f "config.yaml" ]; then
         print_status "Creating configuration file..."
         cp config.yaml.example config.yaml
-        
+
         # Update Obsidian path in config
         sed -i "s|/tmp/test_obsidian|$OBSIDIAN_PATH|g" config.yaml
-        
+
         # Update Kindle email if provided
         if [ -n "$KINDLE_EMAIL" ]; then
             sed -i "s|test@kindle.com|$KINDLE_EMAIL|g" config.yaml
         fi
-        
+
         # Update SMTP settings if provided
         if [ -n "$SMTP_USERNAME" ]; then
             sed -i "s|test@gmail.com|$SMTP_USERNAME|g" config.yaml
         fi
-        
+
         print_status "Configuration file created: config.yaml"
     else
         print_status "Configuration file already exists"
     fi
-    
+
     # Create .env file if it doesn't exist
     if [ ! -f ".env" ]; then
         print_status "Creating environment file..."
@@ -240,7 +240,7 @@ EOF
     else
         print_status "Environment file already exists"
     fi
-    
+
     # Update docker-compose.yml with correct paths
     print_status "Updating Docker Compose configuration..."
     sed -i "s|/path/to/your/obsidian/vault|$OBSIDIAN_PATH|g" docker-compose.yml

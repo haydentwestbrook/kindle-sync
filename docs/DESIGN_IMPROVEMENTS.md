@@ -78,12 +78,12 @@ from pathlib import Path
 
 class SecretsManager:
     """Secure secrets management with encryption at rest."""
-    
+
     def __init__(self, key_path: Optional[Path] = None):
         self.key_path = key_path or Path.home() / ".kindle-sync" / "secrets.key"
         self._ensure_key_exists()
         self.cipher = Fernet(self._load_key())
-    
+
     def _ensure_key_exists(self):
         """Generate encryption key if it doesn't exist."""
         if not self.key_path.exists():
@@ -91,26 +91,26 @@ class SecretsManager:
             key = Fernet.generate_key()
             self.key_path.write_bytes(key)
             self.key_path.chmod(0o600)  # Owner read/write only
-    
+
     def _load_key(self) -> bytes:
         """Load encryption key from file."""
         return self.key_path.read_bytes()
-    
+
     def encrypt_secret(self, secret: str) -> str:
         """Encrypt a secret value."""
         return self.cipher.encrypt(secret.encode()).decode()
-    
+
     def decrypt_secret(self, encrypted_secret: str) -> str:
         """Decrypt a secret value."""
         return self.cipher.decrypt(encrypted_secret.encode()).decode()
-    
+
     def get_secret(self, key: str, default: Optional[str] = None) -> Optional[str]:
         """Get secret from environment or encrypted storage."""
         # Priority: Environment variable > Encrypted config > Default
         env_key = f"KINDLE_SYNC_{key.upper()}"
         if env_value := os.getenv(env_key):
             return env_value
-        
+
         # Try to decrypt from config
         try:
             encrypted_value = self.config.get(f"secrets.{key}")
@@ -118,7 +118,7 @@ class SecretsManager:
                 return self.decrypt_secret(encrypted_value)
         except Exception:
             pass
-        
+
         return default
 ```
 
@@ -165,7 +165,7 @@ class KindleSyncError(Exception):
     context: Optional[Dict[str, Any]] = None
     recoverable: bool = True
     retry_count: int = 0
-    
+
     def __str__(self):
         return f"[{self.severity.value.upper()}] {self.message}"
 
@@ -183,9 +183,9 @@ class ConfigurationError(KindleSyncError):
 
 # src/core/retry.py
 from tenacity import (
-    retry, 
-    stop_after_attempt, 
-    wait_exponential, 
+    retry,
+    stop_after_attempt,
+    wait_exponential,
     retry_if_exception_type,
     before_sleep_log
 )
@@ -209,7 +209,7 @@ def with_retry(
 # src/core/error_handler.py
 class ErrorHandler:
     """Centralized error handling and recovery."""
-    
+
     def __init__(self, config: Config):
         self.config = config
         self.error_stats = {
@@ -218,26 +218,26 @@ class ErrorHandler:
             "critical_errors": 0,
             "errors_by_type": {}
         }
-    
+
     def handle_error(self, error: KindleSyncError, context: Dict[str, Any]) -> bool:
         """Handle error with appropriate recovery strategy."""
         self.error_stats["total_errors"] += 1
         self.error_stats["errors_by_type"][type(error).__name__] = \
             self.error_stats["errors_by_type"].get(type(error).__name__, 0) + 1
-        
+
         if error.severity == ErrorSeverity.CRITICAL:
             self.error_stats["critical_errors"] += 1
             logger.critical(f"Critical error: {error}")
             return False
-        
+
         if error.recoverable:
             self.error_stats["recoverable_errors"] += 1
             logger.warning(f"Recoverable error: {error}")
             return self._attempt_recovery(error, context)
-        
+
         logger.error(f"Non-recoverable error: {error}")
         return False
-    
+
     def _attempt_recovery(self, error: KindleSyncError, context: Dict[str, Any]) -> bool:
         """Attempt to recover from an error."""
         # Implement recovery strategies based on error type
@@ -245,7 +245,7 @@ class ErrorHandler:
             return self._recover_email_service(error, context)
         elif isinstance(error, FileProcessingError):
             return self._recover_file_processing(error, context)
-        
+
         return False
 ```
 
@@ -291,7 +291,7 @@ class FileValidationRequest(BaseModel):
         "application/pdf",
         "text/plain"
     ])
-    
+
     @validator('file_path')
     def validate_file_path(cls, v):
         if not v.exists():
@@ -299,14 +299,14 @@ class FileValidationRequest(BaseModel):
         if not v.is_file():
             raise ValueError("Path is not a file")
         return v
-    
+
     @validator('file_path')
     def validate_file_size(cls, v, values):
         max_size_bytes = values.get('max_size_mb', 50) * 1024 * 1024
         if v.stat().st_size > max_size_bytes:
             raise ValueError(f"File size exceeds {values.get('max_size_mb', 50)}MB limit")
         return v
-    
+
     @validator('file_path')
     def validate_file_extension(cls, v, values):
         allowed_extensions = values.get('allowed_extensions', [])
@@ -316,16 +316,16 @@ class FileValidationRequest(BaseModel):
 
 class FileValidator:
     """Comprehensive file validation."""
-    
+
     def __init__(self):
         self.mime_detector = magic.Magic(mime=True)
-    
+
     def validate_file(self, request: FileValidationRequest) -> ValidationResult:
         """Validate file against all criteria."""
         try:
             # Basic validation (handled by Pydantic)
             validated_path = request.file_path
-            
+
             # MIME type validation
             mime_type = self.mime_detector.from_file(str(validated_path))
             if mime_type not in request.allowed_mime_types:
@@ -333,26 +333,26 @@ class FileValidator:
                     valid=False,
                     error=f"MIME type {mime_type} not allowed"
                 )
-            
+
             # Content validation
             if not self._validate_content(validated_path, mime_type):
                 return ValidationResult(
                     valid=False,
                     error="File content validation failed"
                 )
-            
+
             # Security validation
             if not self._validate_security(validated_path):
                 return ValidationResult(
                     valid=False,
                     error="File failed security validation"
                 )
-            
+
             return ValidationResult(valid=True, file_path=validated_path)
-            
+
         except Exception as e:
             return ValidationResult(valid=False, error=str(e))
-    
+
     def _validate_content(self, file_path: Path, mime_type: str) -> bool:
         """Validate file content integrity."""
         try:
@@ -363,20 +363,20 @@ class FileValidator:
             return True
         except Exception:
             return False
-    
+
     def _validate_security(self, file_path: Path) -> bool:
         """Basic security validation."""
         # Check for suspicious patterns
         try:
             with open(file_path, 'rb') as f:
                 content = f.read(1024)  # Read first 1KB
-                
+
             # Check for executable signatures
             executable_signatures = [b'\x4d\x5a', b'\x7f\x45\x4c\x46']  # PE, ELF
             for sig in executable_signatures:
                 if content.startswith(sig):
                     return False
-            
+
             return True
         except Exception:
             return False
@@ -427,36 +427,36 @@ from pathlib import Path
 
 class AsyncSyncProcessor:
     """Asynchronous file processing with thread pool."""
-    
+
     def __init__(self, config: Config, max_workers: int = 4):
         self.config = config
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
         self.processing_queue = asyncio.Queue()
         self.active_tasks: Dict[str, asyncio.Task] = {}
-        
+
     async def process_file_async(self, file_path: Path) -> ProcessingResult:
         """Process file asynchronously."""
         task_id = f"{file_path.name}_{file_path.stat().st_mtime}"
-        
+
         # Check if already processing
         if task_id in self.active_tasks:
             return ProcessingResult(
                 success=False,
                 error="File already being processed"
             )
-        
+
         # Create processing task
         task = asyncio.create_task(
             self._process_file_with_retry(file_path)
         )
         self.active_tasks[task_id] = task
-        
+
         try:
             result = await task
             return result
         finally:
             self.active_tasks.pop(task_id, None)
-    
+
     async def _process_file_with_retry(self, file_path: Path) -> ProcessingResult:
         """Process file with retry logic."""
         for attempt in range(3):
@@ -466,11 +466,11 @@ class AsyncSyncProcessor:
                 if attempt == 2:  # Last attempt
                     return ProcessingResult(success=False, error=str(e))
                 await asyncio.sleep(2 ** attempt)  # Exponential backoff
-    
+
     async def _process_file_sync(self, file_path: Path) -> ProcessingResult:
         """Process file using thread pool for CPU-bound operations."""
         loop = asyncio.get_event_loop()
-        
+
         # Run CPU-intensive operations in thread pool
         if file_path.suffix.lower() == ".md":
             pdf_path = await loop.run_in_executor(
@@ -478,11 +478,11 @@ class AsyncSyncProcessor:
                 self._convert_markdown_to_pdf,
                 file_path
             )
-            
+
             # Send to Kindle (I/O bound)
             success = await self._send_pdf_to_kindle_async(pdf_path)
             return ProcessingResult(success=success, data=pdf_path)
-        
+
         elif file_path.suffix.lower() == ".pdf":
             markdown_path = await loop.run_in_executor(
                 self.executor,
@@ -490,9 +490,9 @@ class AsyncSyncProcessor:
                 file_path
             )
             return ProcessingResult(success=True, data=markdown_path)
-        
+
         return ProcessingResult(success=False, error="Unsupported file type")
-    
+
     async def _send_pdf_to_kindle_async(self, pdf_path: Path) -> bool:
         """Send PDF to Kindle asynchronously."""
         # Use aiohttp for async HTTP requests if needed
@@ -507,38 +507,38 @@ class AsyncSyncProcessor:
 # src/core/async_file_watcher.py
 class AsyncFileWatcher:
     """Asynchronous file watcher with queue-based processing."""
-    
+
     def __init__(self, config: Config, processor: AsyncSyncProcessor):
         self.config = config
         self.processor = processor
         self.observer = None
         self.processing_queue = asyncio.Queue(maxsize=100)
         self.running = False
-    
+
     async def start(self):
         """Start async file watching."""
         self.running = True
-        
+
         # Start file system observer
         self.observer = Observer()
         handler = AsyncFileHandler(self.processing_queue)
         self.observer.schedule(handler, str(self.config.get_obsidian_vault_path()), recursive=True)
         self.observer.start()
-        
+
         # Start processing workers
         workers = [
             asyncio.create_task(self._process_queue())
             for _ in range(3)  # 3 concurrent workers
         ]
-        
+
         await asyncio.gather(*workers)
-    
+
     async def _process_queue(self):
         """Process files from the queue."""
         while self.running:
             try:
                 file_path = await asyncio.wait_for(
-                    self.processing_queue.get(), 
+                    self.processing_queue.get(),
                     timeout=1.0
                 )
                 await self.processor.process_file_async(file_path)
@@ -588,7 +588,7 @@ Base = declarative_base()
 class ProcessedFile(Base):
     """Model for tracking processed files."""
     __tablename__ = 'processed_files'
-    
+
     id = Column(Integer, primary_key=True)
     file_path = Column(String(500), unique=True, nullable=False)
     file_hash = Column(String(64), nullable=False)  # SHA-256
@@ -598,14 +598,14 @@ class ProcessedFile(Base):
     status = Column(String(20), nullable=False)  # success, failed, processing
     error_message = Column(Text, nullable=True)
     processing_time_ms = Column(Integer, nullable=True)
-    
+
     # Relationships
     operations = relationship("FileOperation", back_populates="file")
 
 class FileOperation(Base):
     """Model for tracking individual operations on files."""
     __tablename__ = 'file_operations'
-    
+
     id = Column(Integer, primary_key=True)
     file_id = Column(Integer, ForeignKey('processed_files.id'), nullable=False)
     operation_type = Column(String(50), nullable=False)  # convert_to_pdf, send_to_kindle, etc.
@@ -614,14 +614,14 @@ class FileOperation(Base):
     success = Column(Boolean, nullable=False)
     error_message = Column(Text, nullable=True)
     metadata = Column(Text, nullable=True)  # JSON string for additional data
-    
+
     # Relationships
     file = relationship("ProcessedFile", back_populates="operations")
 
 class SystemStats(Base):
     """Model for system statistics."""
     __tablename__ = 'system_stats'
-    
+
     id = Column(Integer, primary_key=True)
     metric_name = Column(String(100), nullable=False)
     metric_value = Column(Integer, nullable=False)
@@ -631,26 +631,26 @@ class SystemStats(Base):
 # src/database/manager.py
 class DatabaseManager:
     """Database manager for Kindle Sync application."""
-    
+
     def __init__(self, db_path: str = "kindle_sync.db"):
         self.db_path = db_path
         self.engine = create_engine(f"sqlite:///{db_path}")
         self.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=self.engine)
-        
+
         # Create tables
         Base.metadata.create_all(bind=self.engine)
-    
+
     def get_session(self):
         """Get database session."""
         return self.SessionLocal()
-    
-    def record_file_processed(self, file_path: Path, status: str, 
+
+    def record_file_processed(self, file_path: Path, status: str,
                             processing_time_ms: int = None, error_message: str = None):
         """Record a processed file."""
         with self.get_session() as session:
             file_hash = self._calculate_file_hash(file_path)
             file_size = file_path.stat().st_size
-            
+
             processed_file = ProcessedFile(
                 file_path=str(file_path),
                 file_hash=file_hash,
@@ -660,11 +660,11 @@ class DatabaseManager:
                 processing_time_ms=processing_time_ms,
                 error_message=error_message
             )
-            
+
             session.add(processed_file)
             session.commit()
-    
-    def record_operation(self, file_path: Path, operation_type: str, 
+
+    def record_operation(self, file_path: Path, operation_type: str,
                         success: bool, error_message: str = None, metadata: dict = None):
         """Record an operation on a file."""
         with self.get_session() as session:
@@ -672,7 +672,7 @@ class DatabaseManager:
             file_record = session.query(ProcessedFile).filter(
                 ProcessedFile.file_path == str(file_path)
             ).first()
-            
+
             if file_record:
                 operation = FileOperation(
                     file_id=file_record.id,
@@ -683,21 +683,21 @@ class DatabaseManager:
                 )
                 session.add(operation)
                 session.commit()
-    
+
     def get_processing_stats(self) -> dict:
         """Get processing statistics from database."""
         with self.get_session() as session:
             stats = {}
-            
+
             # Total files processed
             stats['total_files'] = session.query(ProcessedFile).count()
-            
+
             # Success rate
             successful = session.query(ProcessedFile).filter(
                 ProcessedFile.status == 'success'
             ).count()
             stats['success_rate'] = (successful / stats['total_files'] * 100) if stats['total_files'] > 0 else 0
-            
+
             # Average processing time
             avg_time = session.query(ProcessedFile).filter(
                 ProcessedFile.processing_time_ms.isnot(None)
@@ -705,9 +705,9 @@ class DatabaseManager:
                 func.avg(ProcessedFile.processing_time_ms)
             ).scalar()
             stats['avg_processing_time_ms'] = avg_time or 0
-            
+
             return stats
-    
+
     def _calculate_file_hash(self, file_path: Path) -> str:
         """Calculate SHA-256 hash of file."""
         import hashlib
@@ -777,7 +777,7 @@ class HealthReport:
 
 class HealthMonitor:
     """Comprehensive health monitoring system."""
-    
+
     def __init__(self, config: Config):
         self.config = config
         self.checks = {
@@ -789,17 +789,17 @@ class HealthMonitor:
             'file_permissions': self._check_file_permissions,
             'network_connectivity': self._check_network_connectivity,
         }
-    
+
     def get_health_report(self) -> HealthReport:
         """Get comprehensive health report."""
         checks = []
-        
+
         for name, check_func in self.checks.items():
             try:
                 start_time = time.time()
                 check_result = check_func()
                 response_time = (time.time() - start_time) * 1000
-                
+
                 check_result.response_time_ms = response_time
                 checks.append(check_result)
             except Exception as e:
@@ -809,17 +809,17 @@ class HealthMonitor:
                     message=f"Health check failed: {e}",
                     response_time_ms=None
                 ))
-        
+
         # Determine overall status
         overall_status = self._determine_overall_status(checks)
-        
+
         return HealthReport(
             overall_status=overall_status,
             checks=checks,
             timestamp=datetime.utcnow(),
             version=self._get_version()
         )
-    
+
     def _check_file_watcher(self) -> HealthCheck:
         """Check file watcher health."""
         try:
@@ -830,7 +830,7 @@ class HealthMonitor:
                     status=HealthStatus.CRITICAL,
                     message="File watcher is not running"
                 )
-            
+
             # Check if it can access the vault
             vault_path = self.config.get_obsidian_vault_path()
             if not vault_path.exists():
@@ -839,7 +839,7 @@ class HealthMonitor:
                     status=HealthStatus.CRITICAL,
                     message=f"Obsidian vault not accessible: {vault_path}"
                 )
-            
+
             return HealthCheck(
                 name='file_watcher',
                 status=HealthStatus.HEALTHY,
@@ -851,19 +851,19 @@ class HealthMonitor:
                 status=HealthStatus.CRITICAL,
                 message=f"File watcher check failed: {e}"
             )
-    
+
     def _check_email_service(self) -> HealthCheck:
         """Check email service connectivity."""
         try:
             smtp_config = self.config.get_smtp_config()
-            
+
             # Test SMTP connection
             import smtplib
             server = smtplib.SMTP(smtp_config['server'], smtp_config['port'])
             server.starttls()
             server.login(smtp_config['username'], smtp_config['password'])
             server.quit()
-            
+
             return HealthCheck(
                 name='email_service',
                 status=HealthStatus.HEALTHY,
@@ -875,17 +875,17 @@ class HealthMonitor:
                 status=HealthStatus.UNHEALTHY,
                 message=f"Email service check failed: {e}"
             )
-    
+
     def _check_disk_space(self) -> HealthCheck:
         """Check available disk space."""
         try:
             vault_path = self.config.get_obsidian_vault_path()
             total, used, free = shutil.disk_usage(vault_path)
-            
+
             free_gb = free / (1024**3)
             total_gb = total / (1024**3)
             usage_percent = (used / total) * 100
-            
+
             if usage_percent > 90:
                 status = HealthStatus.CRITICAL
                 message = f"Disk space critically low: {free_gb:.1f}GB free ({usage_percent:.1f}% used)"
@@ -895,7 +895,7 @@ class HealthMonitor:
             else:
                 status = HealthStatus.HEALTHY
                 message = f"Disk space OK: {free_gb:.1f}GB free ({usage_percent:.1f}% used)"
-            
+
             return HealthCheck(
                 name='disk_space',
                 status=status,
@@ -912,13 +912,13 @@ class HealthMonitor:
                 status=HealthStatus.CRITICAL,
                 message=f"Disk space check failed: {e}"
             )
-    
+
     def _check_memory_usage(self) -> HealthCheck:
         """Check memory usage."""
         try:
             memory = psutil.virtual_memory()
             usage_percent = memory.percent
-            
+
             if usage_percent > 90:
                 status = HealthStatus.CRITICAL
                 message = f"Memory usage critically high: {usage_percent:.1f}%"
@@ -928,7 +928,7 @@ class HealthMonitor:
             else:
                 status = HealthStatus.HEALTHY
                 message = f"Memory usage normal: {usage_percent:.1f}%"
-            
+
             return HealthCheck(
                 name='memory_usage',
                 status=status,
@@ -957,7 +957,7 @@ async def health_check():
     """Health check endpoint."""
     try:
         health_report = health_monitor.get_health_report()
-        
+
         status_code = 200
         if health_report.overall_status == HealthStatus.CRITICAL:
             status_code = 503
@@ -965,7 +965,7 @@ async def health_check():
             status_code = 503
         elif health_report.overall_status == HealthStatus.DEGRADED:
             status_code = 200  # Still operational
-        
+
         return JSONResponse(
             status_code=status_code,
             content=health_report.__dict__
@@ -977,11 +977,11 @@ async def health_check():
 async def readiness_check():
     """Readiness check for Kubernetes."""
     health_report = health_monitor.get_health_report()
-    
+
     # Consider system ready if not critical
     if health_report.overall_status == HealthStatus.CRITICAL:
         raise HTTPException(status_code=503, detail="System not ready")
-    
+
     return {"status": "ready"}
 
 @app.get("/health/live")
@@ -1030,19 +1030,19 @@ ProcessingResultType = TypeVar('ProcessingResultType')
 
 class FileProcessor(Protocol):
     """Protocol for file processors."""
-    
+
     def can_process(self, file_path: Path) -> bool:
         """Check if processor can handle the file."""
         ...
-    
+
     def process(self, file_path: Path) -> 'ProcessingResult[Path]':
         """Process the file."""
         ...
 
 class EmailService(Protocol):
     """Protocol for email services."""
-    
-    def send_email(self, to: str, subject: str, body: str, 
+
+    def send_email(self, to: str, subject: str, body: str,
                    attachments: Optional[List[Path]] = None) -> bool:
         """Send email with optional attachments."""
         ...
@@ -1055,9 +1055,9 @@ class ProcessingResult(Generic[T]):
     error: Optional[str] = None
     processing_time_ms: Optional[float] = None
     metadata: Optional[Dict[str, Any]] = None
-    
+
     @classmethod
-    def success_result(cls, data: T, processing_time_ms: float = None, 
+    def success_result(cls, data: T, processing_time_ms: float = None,
                       metadata: Dict[str, Any] = None) -> 'ProcessingResult[T]':
         """Create a successful result."""
         return cls(
@@ -1066,7 +1066,7 @@ class ProcessingResult(Generic[T]):
             processing_time_ms=processing_time_ms,
             metadata=metadata
         )
-    
+
     @classmethod
     def error_result(cls, error: str, metadata: Dict[str, Any] = None) -> 'ProcessingResult[T]':
         """Create an error result."""
@@ -1093,7 +1093,7 @@ class FileMetadata:
     checksum: str
     created_at: datetime
     modified_at: datetime
-    
+
     @classmethod
     def from_path(cls, path: Path) -> 'FileMetadata':
         """Create metadata from file path."""
@@ -1113,7 +1113,7 @@ class Config:
     def get_obsidian_vault_path(self) -> Path:
         """Get the Obsidian vault path."""
         return Path(self.get("obsidian.vault_path", ""))
-    
+
     def get_smtp_config(self) -> Dict[str, Union[str, int]]:
         """Get SMTP configuration with proper typing."""
         return {
@@ -1161,7 +1161,7 @@ class ObsidianConfig(BaseSettings):
     sync_folder: str = Field(default="Kindle Sync", description="Sync folder name")
     templates_folder: str = Field(default="Templates", description="Templates folder name")
     watch_subfolders: bool = Field(default=True, description="Watch subfolders")
-    
+
     @validator('vault_path')
     def validate_vault_path(cls, v):
         if not v.exists():
@@ -1169,7 +1169,7 @@ class ObsidianConfig(BaseSettings):
         if not v.is_dir():
             raise ValueError(f"Obsidian vault path is not a directory: {v}")
         return v
-    
+
     class Config:
         env_prefix = "OBSIDIAN_"
 
@@ -1178,7 +1178,7 @@ class KindleConfig(BaseSettings):
     email: str = Field(..., description="Kindle email address")
     approved_senders: List[str] = Field(default_factory=list, description="Approved email senders")
     usb_path: Optional[Path] = Field(default=None, description="USB mount path")
-    
+
     @validator('email')
     def validate_email(cls, v):
         import re
@@ -1186,7 +1186,7 @@ class KindleConfig(BaseSettings):
         if not re.match(email_pattern, v):
             raise ValueError(f"Invalid email format: {v}")
         return v
-    
+
     class Config:
         env_prefix = "KINDLE_"
 
@@ -1197,7 +1197,7 @@ class SMTPConfig(BaseSettings):
     username: str = Field(..., description="SMTP username")
     password: str = Field(..., description="SMTP password")
     use_tls: bool = Field(default=True, description="Use TLS encryption")
-    
+
     class Config:
         env_prefix = "SMTP_"
 
@@ -1207,7 +1207,7 @@ class ProcessingConfig(BaseSettings):
     concurrent_processing: bool = Field(default=True, description="Enable concurrent processing")
     retry_attempts: int = Field(default=3, ge=1, le=10, description="Number of retry attempts")
     debounce_time: float = Field(default=2.0, ge=0.1, le=10.0, description="File change debounce time")
-    
+
     class Config:
         env_prefix = "PROCESSING_"
 
@@ -1217,14 +1217,14 @@ class LoggingConfig(BaseSettings):
     file: str = Field(default="kindle_sync.log", description="Log file path")
     max_size: str = Field(default="10MB", description="Maximum log file size")
     backup_count: int = Field(default=5, ge=1, le=20, description="Number of backup log files")
-    
+
     @validator('level')
     def validate_level(cls, v):
         valid_levels = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
         if v.upper() not in valid_levels:
             raise ValueError(f"Invalid logging level: {v}. Must be one of {valid_levels}")
         return v.upper()
-    
+
     class Config:
         env_prefix = "LOGGING_"
 
@@ -1235,22 +1235,22 @@ class KindleSyncConfig(BaseSettings):
     smtp: SMTPConfig
     processing: ProcessingConfig
     logging: LoggingConfig
-    
+
     # Advanced settings
     advanced: Dict[str, Any] = Field(default_factory=dict)
-    
+
     @root_validator
     def validate_configuration(cls, values):
         """Validate entire configuration."""
         # Check if approved senders include SMTP username
         smtp_username = values.get('smtp', {}).get('username', '')
         approved_senders = values.get('kindle', {}).get('approved_senders', [])
-        
+
         if smtp_username and smtp_username not in approved_senders:
             logger.warning(f"SMTP username {smtp_username} not in approved senders list")
-        
+
         return values
-    
+
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
@@ -1259,7 +1259,7 @@ class KindleSyncConfig(BaseSettings):
 # src/config/validator.py
 class ConfigValidator:
     """Configuration validation and loading."""
-    
+
     @staticmethod
     def load_and_validate(config_path: str) -> KindleSyncConfig:
         """Load and validate configuration from file."""
@@ -1267,35 +1267,35 @@ class ConfigValidator:
             # Load YAML file
             with open(config_path, 'r', encoding='utf-8') as f:
                 config_data = yaml.safe_load(f)
-            
+
             # Convert to Pydantic model
             config = KindleSyncConfig(**config_data)
-            
+
             # Additional validation
             ConfigValidator._validate_paths(config)
             ConfigValidator._validate_connectivity(config)
-            
+
             logger.info("Configuration validation successful")
             return config
-            
+
         except yaml.YAMLError as e:
             raise ConfigurationError(f"Invalid YAML configuration: {e}")
         except ValidationError as e:
             raise ConfigurationError(f"Configuration validation failed: {e}")
         except Exception as e:
             raise ConfigurationError(f"Configuration loading failed: {e}")
-    
+
     @staticmethod
     def _validate_paths(config: KindleSyncConfig):
         """Validate file paths."""
         # Check vault path
         if not config.obsidian.vault_path.exists():
             raise ConfigurationError(f"Obsidian vault path does not exist: {config.obsidian.vault_path}")
-        
+
         # Check USB path if specified
         if config.kindle.usb_path and not config.kindle.usb_path.exists():
             logger.warning(f"Kindle USB path does not exist: {config.kindle.usb_path}")
-    
+
     @staticmethod
     def _validate_connectivity(config: KindleSyncConfig):
         """Validate network connectivity."""
@@ -1348,40 +1348,40 @@ from .types import ProcessingResult, FileMetadata
 
 class FileProcessorPlugin(ABC):
     """Base class for file processor plugins."""
-    
+
     @property
     @abstractmethod
     def name(self) -> str:
         """Plugin name."""
         pass
-    
+
     @property
     @abstractmethod
     def version(self) -> str:
         """Plugin version."""
         pass
-    
+
     @property
     @abstractmethod
     def supported_extensions(self) -> List[str]:
         """List of supported file extensions."""
         pass
-    
+
     @abstractmethod
     def can_process(self, file_metadata: FileMetadata) -> bool:
         """Check if plugin can process the file."""
         pass
-    
+
     @abstractmethod
-    def process(self, file_metadata: FileMetadata, 
+    def process(self, file_metadata: FileMetadata,
                 config: Dict[str, Any]) -> ProcessingResult:
         """Process the file."""
         pass
-    
+
     def get_priority(self) -> int:
         """Get plugin priority (higher = more priority)."""
         return 100
-    
+
     def get_config_schema(self) -> Dict[str, Any]:
         """Get plugin configuration schema."""
         return {}
@@ -1389,43 +1389,43 @@ class FileProcessorPlugin(ABC):
 # src/plugins/markdown_processor.py
 class MarkdownToPDFPlugin(FileProcessorPlugin):
     """Plugin for converting Markdown to PDF."""
-    
+
     @property
     def name(self) -> str:
         return "markdown-to-pdf"
-    
+
     @property
     def version(self) -> str:
         return "1.0.0"
-    
+
     @property
     def supported_extensions(self) -> List[str]:
         return [".md", ".markdown"]
-    
+
     def can_process(self, file_metadata: FileMetadata) -> bool:
         return file_metadata.file_type == FileType.MARKDOWN
-    
-    def process(self, file_metadata: FileMetadata, 
+
+    def process(self, file_metadata: FileMetadata,
                 config: Dict[str, Any]) -> ProcessingResult:
         """Convert Markdown to PDF."""
         try:
             start_time = time.time()
-            
+
             # Load configuration
             pdf_config = config.get('pdf', {})
-            
+
             # Convert to PDF
             converter = MarkdownToPDFConverter(pdf_config)
             pdf_path = converter.convert(file_metadata.path)
-            
+
             processing_time = (time.time() - start_time) * 1000
-            
+
             return ProcessingResult.success_result(
                 data=pdf_path,
                 processing_time_ms=processing_time,
                 metadata={'plugin': self.name, 'version': self.version}
             )
-            
+
         except Exception as e:
             return ProcessingResult.error_result(
                 error=f"Markdown to PDF conversion failed: {e}",
@@ -1435,43 +1435,43 @@ class MarkdownToPDFPlugin(FileProcessorPlugin):
 # src/plugins/pdf_processor.py
 class PDFToMarkdownPlugin(FileProcessorPlugin):
     """Plugin for converting PDF to Markdown."""
-    
+
     @property
     def name(self) -> str:
         return "pdf-to-markdown"
-    
+
     @property
     def version(self) -> str:
         return "1.0.0"
-    
+
     @property
     def supported_extensions(self) -> List[str]:
         return [".pdf"]
-    
+
     def can_process(self, file_metadata: FileMetadata) -> bool:
         return file_metadata.file_type == FileType.PDF
-    
-    def process(self, file_metadata: FileMetadata, 
+
+    def process(self, file_metadata: FileMetadata,
                 config: Dict[str, Any]) -> ProcessingResult:
         """Convert PDF to Markdown."""
         try:
             start_time = time.time()
-            
+
             # Load configuration
             ocr_config = config.get('ocr', {})
-            
+
             # Convert to Markdown
             converter = PDFToMarkdownConverter(ocr_config)
             markdown_path = converter.convert(file_metadata.path)
-            
+
             processing_time = (time.time() - start_time) * 1000
-            
+
             return ProcessingResult.success_result(
                 data=markdown_path,
                 processing_time_ms=processing_time,
                 metadata={'plugin': self.name, 'version': self.version}
             )
-            
+
         except Exception as e:
             return ProcessingResult.error_result(
                 error=f"PDF to Markdown conversion failed: {e}",
@@ -1481,13 +1481,13 @@ class PDFToMarkdownPlugin(FileProcessorPlugin):
 # src/plugins/manager.py
 class PluginManager:
     """Manages file processor plugins."""
-    
+
     def __init__(self, config: KindleSyncConfig):
         self.config = config
         self.plugins: List[FileProcessorPlugin] = []
         self._load_builtin_plugins()
         self._load_external_plugins()
-    
+
     def _load_builtin_plugins(self):
         """Load built-in plugins."""
         self.plugins.extend([
@@ -1496,73 +1496,73 @@ class PluginManager:
             EmailSenderPlugin(),
             BackupPlugin(),
         ])
-    
+
     def _load_external_plugins(self):
         """Load external plugins from plugins directory."""
         plugins_dir = Path("plugins")
         if not plugins_dir.exists():
             return
-        
+
         for plugin_file in plugins_dir.glob("*.py"):
             try:
                 plugin_module = importlib.import_module(f"plugins.{plugin_file.stem}")
                 for attr_name in dir(plugin_module):
                     attr = getattr(plugin_module, attr_name)
-                    if (isinstance(attr, type) and 
-                        issubclass(attr, FileProcessorPlugin) and 
+                    if (isinstance(attr, type) and
+                        issubclass(attr, FileProcessorPlugin) and
                         attr != FileProcessorPlugin):
                         plugin_instance = attr()
                         self.plugins.append(plugin_instance)
                         logger.info(f"Loaded external plugin: {plugin_instance.name}")
             except Exception as e:
                 logger.error(f"Failed to load plugin {plugin_file}: {e}")
-    
+
     def get_plugin_for_file(self, file_metadata: FileMetadata) -> Optional[FileProcessorPlugin]:
         """Get the best plugin for processing a file."""
         suitable_plugins = [
             plugin for plugin in self.plugins
             if plugin.can_process(file_metadata)
         ]
-        
+
         if not suitable_plugins:
             return None
-        
+
         # Return plugin with highest priority
         return max(suitable_plugins, key=lambda p: p.get_priority())
-    
+
     def process_file(self, file_metadata: FileMetadata) -> ProcessingResult:
         """Process file using appropriate plugin."""
         plugin = self.get_plugin_for_file(file_metadata)
-        
+
         if not plugin:
             return ProcessingResult.error_result(
                 error=f"No plugin available for file type: {file_metadata.file_type}"
             )
-        
+
         try:
             # Get plugin-specific configuration
             plugin_config = self.config.advanced.get('plugins', {}).get(plugin.name, {})
-            
+
             # Process file
             result = plugin.process(file_metadata, plugin_config)
-            
+
             # Record plugin usage
             self._record_plugin_usage(plugin, result)
-            
+
             return result
-            
+
         except Exception as e:
             logger.error(f"Plugin {plugin.name} failed to process file: {e}")
             return ProcessingResult.error_result(
                 error=f"Plugin processing failed: {e}",
                 metadata={'plugin': plugin.name}
             )
-    
+
     def _record_plugin_usage(self, plugin: FileProcessorPlugin, result: ProcessingResult):
         """Record plugin usage statistics."""
         # Implementation for tracking plugin performance
         pass
-    
+
     def get_plugin_info(self) -> List[Dict[str, Any]]:
         """Get information about all loaded plugins."""
         return [
@@ -1722,7 +1722,7 @@ services:
         VCS_REF: ${VCS_REF}
     container_name: kindle-sync
     restart: unless-stopped
-    
+
     # Resource limits for Raspberry Pi
     deploy:
       resources:
@@ -1732,14 +1732,14 @@ services:
         reservations:
           memory: 256M
           cpus: '0.25'
-    
+
     # Environment variables
     environment:
       - TZ=${TZ:-UTC}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
       - SMTP_PASSWORD=${SMTP_PASSWORD}
       - KINDLE_EMAIL=${KINDLE_EMAIL}
-    
+
     # Volume mounts
     volumes:
       - ${OBSIDIAN_VAULT_PATH}:/app/data/obsidian:rw
@@ -1748,11 +1748,11 @@ services:
       - ./backups:/app/backups:rw
       - ./temp:/app/temp:rw
       - kindle-sync-data:/app/data
-    
+
     # Ports
     ports:
       - "8000:8000"  # Health check endpoint
-    
+
     # Health check
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -1760,18 +1760,18 @@ services:
       timeout: 10s
       retries: 3
       start_period: 5s
-    
+
     # Logging
     logging:
       driver: "json-file"
       options:
         max-size: "10m"
         max-file: "3"
-    
+
     # Security
     security_opt:
       - no-new-privileges:true
-    
+
     # Capabilities
     cap_drop:
       - ALL
@@ -1855,44 +1855,44 @@ jobs:
   code-quality:
     name: Code Quality
     runs-on: ubuntu-latest
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
         fetch-depth: 0  # Full history for better analysis
-    
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: ${{ env.PYTHON_VERSION }}
         cache: 'pip'
-    
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install -r requirements-test.txt
         pip install black isort flake8 mypy bandit safety
-    
+
     - name: Code formatting (Black)
       run: black --check --diff .
-    
+
     - name: Import sorting (isort)
       run: isort --check-only --diff .
-    
+
     - name: Linting (flake8)
       run: flake8 src tests
-    
+
     - name: Type checking (mypy)
       run: mypy src
-    
+
     - name: Security scan (bandit)
       run: bandit -r src -f json -o bandit-report.json
-    
+
     - name: Dependency vulnerability scan (safety)
       run: safety check --json --output safety-report.json
-    
+
     - name: Upload security reports
       uses: actions/upload-artifact@v4
       if: always()
@@ -1907,32 +1907,32 @@ jobs:
     name: Unit Tests
     runs-on: ubuntu-latest
     needs: code-quality
-    
+
     strategy:
       matrix:
         python-version: ['3.9', '3.10', '3.11']
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v4
       with:
         python-version: ${{ matrix.python-version }}
         cache: 'pip'
-    
+
     - name: Install system dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y tesseract-ocr tesseract-ocr-eng poppler-utils
-    
+
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install -r requirements-test.txt
-    
+
     - name: Run unit tests
       run: |
         python -m pytest tests/unit/ \
@@ -1942,14 +1942,14 @@ jobs:
           --cov-report=term-missing \
           --junitxml=test-results-unit.xml \
           --maxfail=5
-    
+
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v4
       with:
         file: ./coverage.xml
         flags: unit
         name: unit-tests-${{ matrix.python-version }}
-    
+
     - name: Upload test results
       uses: actions/upload-artifact@v4
       if: always()
@@ -1964,7 +1964,7 @@ jobs:
     name: Integration Tests
     runs-on: ubuntu-latest
     needs: unit-tests
-    
+
     services:
       postgres:
         image: postgres:15
@@ -1978,29 +1978,29 @@ jobs:
           --health-retries 5
         ports:
           - 5432:5432
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: ${{ env.PYTHON_VERSION }}
         cache: 'pip'
-    
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install -r requirements-test.txt
-    
+
     - name: Run integration tests
       run: |
         python -m pytest tests/integration/ \
           -v \
           --junitxml=test-results-integration.xml
-    
+
     - name: Upload test results
       uses: actions/upload-artifact@v4
       if: always()
@@ -2013,14 +2013,14 @@ jobs:
     name: Docker Build
     runs-on: ubuntu-latest
     needs: [unit-tests, integration-tests]
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
-    
+
     - name: Build Docker image
       uses: docker/build-push-action@v5
       with:
@@ -2033,7 +2033,7 @@ jobs:
         build-args: |
           BUILD_DATE=${{ github.event.head_commit.timestamp }}
           VCS_REF=${{ github.sha }}
-    
+
     - name: Test Docker image
       run: |
         docker run --rm kindle-sync:test python -c "import sys; print('Python version:', sys.version)"
@@ -2044,11 +2044,11 @@ jobs:
     name: Security Scan
     runs-on: ubuntu-latest
     needs: docker-build
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
       with:
@@ -2056,19 +2056,19 @@ jobs:
         scan-ref: '.'
         format: 'sarif'
         output: 'trivy-results.sarif'
-    
+
     - name: Upload Trivy scan results
       uses: github/codeql-action/upload-sarif@v2
       with:
         sarif_file: 'trivy-results.sarif'
-    
+
     - name: Scan Docker image
       uses: aquasecurity/trivy-action@master
       with:
         image-ref: 'kindle-sync:test'
         format: 'sarif'
         output: 'trivy-image-results.sarif'
-    
+
     - name: Upload Docker scan results
       uses: github/codeql-action/upload-sarif@v2
       with:
@@ -2080,31 +2080,31 @@ jobs:
     runs-on: ubuntu-latest
     needs: integration-tests
     if: github.event_name == 'schedule' || contains(github.event.head_commit.message, '[perf]')
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
         python-version: ${{ env.PYTHON_VERSION }}
         cache: 'pip'
-    
+
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install -r requirements-test.txt
         pip install pytest-benchmark
-    
+
     - name: Run performance tests
       run: |
         python -m pytest tests/performance/ \
           --benchmark-only \
           --benchmark-save=performance-results \
           --benchmark-save-data
-    
+
     - name: Upload performance results
       uses: actions/upload-artifact@v4
       with:
@@ -2117,20 +2117,20 @@ jobs:
     runs-on: ubuntu-latest
     needs: [docker-build, security-scan]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-    
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
-    
+
     - name: Login to Docker Hub
       uses: docker/login-action@v3
       with:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
-    
+
     - name: Extract metadata
       id: meta
       uses: docker/metadata-action@v5
@@ -2141,7 +2141,7 @@ jobs:
           type=ref,event=pr
           type=sha,prefix={{branch}}-
           type=raw,value=latest,enable={{is_default_branch}}
-    
+
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
@@ -2163,7 +2163,7 @@ jobs:
     needs: build-and-push
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     environment: production
-    
+
     steps:
     - name: Deploy to production
       run: |
@@ -2203,94 +2203,94 @@ import time
 
 class MetricsCollector:
     """Prometheus metrics collector for Kindle Sync."""
-    
+
     def __init__(self, port: int = 8000):
         self.port = port
-        
+
         # File processing metrics
         self.files_processed = Counter(
             'kindle_sync_files_processed_total',
             'Total number of files processed',
             ['file_type', 'status']
         )
-        
+
         self.file_processing_duration = Histogram(
             'kindle_sync_file_processing_duration_seconds',
             'Time spent processing files',
             ['file_type', 'operation'],
             buckets=[0.1, 0.5, 1.0, 2.5, 5.0, 10.0, 30.0, 60.0, 120.0]
         )
-        
+
         self.active_file_watchers = Gauge(
             'kindle_sync_active_file_watchers',
             'Number of active file watchers'
         )
-        
+
         self.email_send_attempts = Counter(
             'kindle_sync_email_send_attempts_total',
             'Total email send attempts',
             ['status']
         )
-        
+
         self.email_send_duration = Histogram(
             'kindle_sync_email_send_duration_seconds',
             'Time spent sending emails',
             buckets=[1.0, 2.0, 5.0, 10.0, 30.0, 60.0]
         )
-        
+
         self.system_info = Info(
             'kindle_sync_system_info',
             'System information'
         )
-        
+
         self.disk_usage = Gauge(
             'kindle_sync_disk_usage_bytes',
             'Disk usage in bytes',
             ['path']
         )
-        
+
         self.memory_usage = Gauge(
             'kindle_sync_memory_usage_bytes',
             'Memory usage in bytes'
         )
-        
+
         # Set system info
         self.system_info.info({
             'version': '1.0.0',
             'python_version': '3.11',
             'platform': 'raspberry_pi'
         })
-    
+
     def start_server(self):
         """Start Prometheus metrics server."""
         start_http_server(self.port)
         logger.info(f"Metrics server started on port {self.port}")
-    
+
     def record_file_processed(self, file_type: str, status: str):
         """Record file processing."""
         self.files_processed.labels(file_type=file_type, status=status).inc()
-    
+
     def record_processing_time(self, file_type: str, operation: str, duration: float):
         """Record processing time."""
         self.file_processing_duration.labels(
-            file_type=file_type, 
+            file_type=file_type,
             operation=operation
         ).observe(duration)
-    
+
     def record_email_send(self, status: str, duration: float):
         """Record email sending."""
         self.email_send_attempts.labels(status=status).inc()
         self.email_send_duration.observe(duration)
-    
+
     def update_system_metrics(self):
         """Update system metrics."""
         import psutil
         import shutil
-        
+
         # Memory usage
         memory = psutil.virtual_memory()
         self.memory_usage.set(memory.used)
-        
+
         # Disk usage for key paths
         paths = ['/app/data', '/app/logs', '/app/backups']
         for path in paths:
@@ -2309,7 +2309,7 @@ from datetime import datetime
 
 def setup_structured_logging(level: str = "INFO"):
     """Set up structured logging with JSON output."""
-    
+
     # Configure structlog
     structlog.configure(
         processors=[
@@ -2328,7 +2328,7 @@ def setup_structured_logging(level: str = "INFO"):
         wrapper_class=structlog.stdlib.BoundLogger,
         cache_logger_on_first_use=True,
     )
-    
+
     # Configure standard library logging
     import logging
     logging.basicConfig(
@@ -2339,11 +2339,11 @@ def setup_structured_logging(level: str = "INFO"):
 
 class StructuredLogger:
     """Structured logger for Kindle Sync."""
-    
+
     def __init__(self, name: str):
         self.logger = structlog.get_logger(name)
-    
-    def log_file_processing(self, file_path: str, operation: str, 
+
+    def log_file_processing(self, file_path: str, operation: str,
                           status: str, duration_ms: float, **kwargs):
         """Log file processing event."""
         self.logger.info(
@@ -2354,8 +2354,8 @@ class StructuredLogger:
             duration_ms=duration_ms,
             **kwargs
         )
-    
-    def log_email_send(self, to: str, subject: str, status: str, 
+
+    def log_email_send(self, to: str, subject: str, status: str,
                       duration_ms: float, **kwargs):
         """Log email sending event."""
         self.logger.info(
@@ -2366,7 +2366,7 @@ class StructuredLogger:
             duration_ms=duration_ms,
             **kwargs
         )
-    
+
     def log_system_event(self, event_type: str, message: str, **kwargs):
         """Log system event."""
         self.logger.info(
@@ -2375,7 +2375,7 @@ class StructuredLogger:
             message=message,
             **kwargs
         )
-    
+
     def log_error(self, error_type: str, message: str, **kwargs):
         """Log error event."""
         self.logger.error(
@@ -2388,23 +2388,23 @@ class StructuredLogger:
 # src/monitoring/alerting.py
 class AlertManager:
     """Alert management system."""
-    
+
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.alert_channels = self._setup_alert_channels()
-    
+
     def _setup_alert_channels(self) -> Dict[str, Any]:
         """Set up alert channels."""
         channels = {}
-        
+
         if self.config.get('slack', {}).get('enabled'):
             channels['slack'] = SlackNotifier(self.config['slack'])
-        
+
         if self.config.get('email', {}).get('enabled'):
             channels['email'] = EmailNotifier(self.config['email'])
-        
+
         return channels
-    
+
     def send_alert(self, severity: str, message: str, context: Dict[str, Any]):
         """Send alert to configured channels."""
         for channel_name, channel in self.alert_channels.items():
@@ -2415,21 +2415,21 @@ class AlertManager:
 
 class SlackNotifier:
     """Slack notification channel."""
-    
+
     def __init__(self, config: Dict[str, Any]):
         self.webhook_url = config['webhook_url']
         self.channel = config.get('channel', '#kindle-sync')
-    
+
     def send_alert(self, severity: str, message: str, context: Dict[str, Any]):
         """Send alert to Slack."""
         import requests
-        
+
         color = {
             'critical': '#ff0000',
             'warning': '#ffaa00',
             'info': '#00aa00'
         }.get(severity, '#666666')
-        
+
         payload = {
             'channel': self.channel,
             'attachments': [{
@@ -2443,7 +2443,7 @@ class SlackNotifier:
                 'timestamp': int(time.time())
             }]
         }
-        
+
         response = requests.post(self.webhook_url, json=payload)
         response.raise_for_status()
 ```
@@ -2565,14 +2565,14 @@ class SlackNotifier:
 ### High Risk
 1. **Breaking Changes**: Major architectural changes may break existing functionality
    - **Mitigation**: Comprehensive testing, gradual rollout, rollback plan
-   
+
 2. **Performance Regression**: New features may impact performance
    - **Mitigation**: Performance testing, benchmarking, monitoring
 
 ### Medium Risk
 1. **Complexity Increase**: New features add complexity
    - **Mitigation**: Good documentation, training, gradual adoption
-   
+
 2. **Dependency Management**: New dependencies may introduce vulnerabilities
    - **Mitigation**: Regular security scans, dependency updates
 
@@ -2714,7 +2714,7 @@ monitoring:
 
 ---
 
-**Document Version**: 1.0  
-**Last Updated**: 2024-01-XX  
-**Next Review**: 2024-02-XX  
+**Document Version**: 1.0
+**Last Updated**: 2024-01-XX
+**Next Review**: 2024-02-XX
 **Owner**: Kindle Sync Development Team

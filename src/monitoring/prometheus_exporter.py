@@ -6,10 +6,9 @@ in Prometheus format for monitoring and alerting.
 """
 
 import asyncio
-import json
-from typing import Any, Dict, Optional
+from typing import Any
 
-from aiohttp import ClientSession, web
+from aiohttp import web
 from aiohttp.web import Request, Response
 from loguru import logger
 from pathlib import Path
@@ -207,7 +206,7 @@ class PrometheusExporter:
             logger.warning(f"Email readiness check failed: {e}")
             return False
 
-    async def _get_database_stats(self) -> Dict[str, Any]:
+    async def _get_database_stats(self) -> dict[str, Any]:
         """Get database statistics."""
         try:
             with self.db_manager.get_session() as session:
@@ -236,7 +235,7 @@ class PrometheusExporter:
             logger.warning(f"Failed to get database stats: {e}")
             return {"error": str(e)}
 
-    def _get_config_summary(self) -> Dict[str, Any]:
+    def _get_config_summary(self) -> dict[str, Any]:
         """Get configuration summary (without sensitive data)."""
         try:
             return {

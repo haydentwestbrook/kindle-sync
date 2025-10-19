@@ -105,7 +105,7 @@ fi
 get_config() {
     local key="$1"
     local default="$2"
-    
+
     if command -v yq >/dev/null 2>&1; then
         yq eval "$key" "$CONFIG_FILE" 2>/dev/null || echo "$default"
     else
@@ -160,13 +160,13 @@ copy_to_pi() {
         print_status "[DRY RUN] Would copy $src to Pi:$dst"
     else
         print_status "Copying $src to Pi:$dst"
-        
+
         local scp_cmd="scp -r"
         if [ -n "$PI_SSH_KEY" ]; then
             scp_cmd="$scp_cmd -i $PI_SSH_KEY"
         fi
         scp_cmd="$scp_cmd -P $PI_PORT $src $PI_USER@$PI_IP:$dst"
-        
+
         eval $scp_cmd
     fi
 }
@@ -186,11 +186,11 @@ check_command_on_pi() {
 deploy_to_pi() {
     print_header "Deploying Kindle Scribe Sync to Raspberry Pi"
     print_status "Target: $PI_USER@$PI_IP:$PI_DIRECTORY"
-    
+
     if [ "$DRY_RUN" = true ]; then
         print_warning "DRY RUN MODE - No actual changes will be made"
     fi
-    
+
     # Test SSH connection
     print_status "Testing SSH connection..."
     if [ "$DRY_RUN" = true ]; then
@@ -206,17 +206,17 @@ deploy_to_pi() {
         fi
         print_success "SSH connection successful"
     fi
-    
+
     # Update system
     print_header "Updating Raspberry Pi System"
     run_on_pi "sudo apt update && sudo apt upgrade -y"
-    
+
     # Install Git if not present
     if ! check_command_on_pi "git"; then
         print_status "Installing Git..."
         run_on_pi "sudo apt install git -y"
     fi
-    
+
     # Clone or update repository
     print_header "Setting up Repository"
     if [ "$DRY_RUN" = true ]; then
@@ -230,7 +230,7 @@ deploy_to_pi() {
             run_on_pi "git clone https://github.com/haydentwestbrook/kindle-sync.git $PI_DIRECTORY"
         fi
     fi
-    
+
     # Install Docker if not skipping
     if [ "$SKIP_DOCKER" = false ]; then
         print_header "Installing Docker"
@@ -245,20 +245,20 @@ deploy_to_pi() {
             fi
         fi
     fi
-    
+
     # Build Docker image if not skipping
     if [ "$SKIP_BUILD" = false ]; then
         print_header "Building Docker Image"
         run_on_pi "cd $PI_DIRECTORY && docker-compose build"
     fi
-    
+
     # Set up configuration if not skipping
     if [ "$SKIP_CONFIG" = false ]; then
         print_header "Setting up Configuration"
-        
+
         # Copy config file to Pi
         copy_to_pi "$CONFIG_FILE" "$PI_DIRECTORY/config.yaml"
-        
+
         # Create .env if it doesn't exist
         if [ "$DRY_RUN" = true ]; then
             print_status "[DRY RUN] Would create .env file on Pi"
@@ -268,27 +268,27 @@ deploy_to_pi() {
                 run_on_pi "cd $PI_DIRECTORY && ./scripts/setup-env.sh --setup-env"
             fi
         fi
-        
+
         # Create directories
         print_status "Creating necessary directories..."
         run_on_pi "mkdir -p $PI_DIRECTORY/logs $PI_DIRECTORY/backups $PI_DIRECTORY/temp"
-        
+
         # Get Obsidian path from config
         OBSIDIAN_PATH=$(get_config '.obsidian.vault_path' '/home/pi/obsidian-vault')
         run_on_pi "mkdir -p $OBSIDIAN_PATH"
         run_on_pi "mkdir -p $OBSIDIAN_PATH/'Kindle Sync'"
         run_on_pi "mkdir -p $OBSIDIAN_PATH/Templates"
         run_on_pi "mkdir -p $OBSIDIAN_PATH/Backups"
-        
+
         # Set permissions
         run_on_pi "sudo chown -R $PI_USER:$PI_USER $PI_DIRECTORY"
         run_on_pi "sudo chown -R $PI_USER:$PI_USER $OBSIDIAN_PATH"
     fi
-    
+
     # Make scripts executable
     print_status "Setting up scripts..."
     run_on_pi "cd $PI_DIRECTORY && chmod +x scripts/*.sh"
-    
+
     print_header "Deployment Complete!"
     print_status "Next steps:"
     print_status "1. SSH into your Pi: ssh $PI_USER@$PI_IP"

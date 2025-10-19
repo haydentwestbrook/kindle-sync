@@ -348,7 +348,7 @@ def hello_world():
         def process_file(file_path):
             try:
                 # Create a mock PDF file directly instead of using weasyprint
-                pdf_path = file_path.with_suffix('.pdf')
+                pdf_path = file_path.with_suffix(".pdf")
                 pdf_path.write_bytes(f"PDF content for {file_path.name}".encode())
                 results.append(pdf_path)
             except Exception as e:

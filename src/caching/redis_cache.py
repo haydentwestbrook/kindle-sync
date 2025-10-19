@@ -4,9 +4,7 @@ Redis cache implementation for the Kindle Sync application.
 Provides Redis-based caching with TTL support.
 """
 
-import asyncio
-import json
-from typing import Any, Dict, Optional
+from typing import Any
 
 from loguru import logger
 
@@ -22,7 +20,7 @@ except ImportError:
 class RedisCache:
     """Redis-based cache implementation."""
 
-    def __init__(self, config: Optional[Dict] = None):
+    def __init__(self, config: dict | None = None):
         """
         Initialize Redis cache.
 
@@ -61,7 +59,7 @@ class RedisCache:
             await self.redis_client.close()
             logger.info("Disconnected from Redis server")
 
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """
         Get a value from the cache.
 
@@ -89,7 +87,7 @@ class RedisCache:
             logger.error(f"Redis get error for key {key}: {e}")
             return None
 
-    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+    async def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
         """
         Set a value in the cache.
 
@@ -182,7 +180,7 @@ class RedisCache:
             logger.error(f"Redis clear error: {e}")
             return False
 
-    async def get_stats(self) -> Dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         """
         Get cache statistics.
 

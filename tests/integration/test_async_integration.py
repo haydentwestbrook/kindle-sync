@@ -4,10 +4,9 @@ Integration tests for async functionality.
 Tests the integration of async components with the existing system.
 """
 
-import asyncio
 import os
 import tempfile
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 from pathlib import Path
@@ -99,7 +98,9 @@ class TestAsyncIntegration:
         assert isinstance(operation_id, int)
 
         # Test adding a metric
-        db_manager.record_metric(metric_name="test_metric", metric_value=42.0, tags={"test": "value"})
+        db_manager.record_metric(
+            metric_name="test_metric", metric_value=42.0, tags={"test": "value"}
+        )
 
         # Verify all records exist
         all_files = db_manager.get_recent_files()
@@ -109,7 +110,9 @@ class TestAsyncIntegration:
             file_record = session.query(ProcessedFile).filter_by(id=file_id).first()
             assert file_record.file_path == file_path
 
-    async def test_health_checker_integration(self, health_checker, mock_config, db_manager):
+    async def test_health_checker_integration(
+        self, health_checker, mock_config, db_manager
+    ):
         """Test health checker integration."""
         # Mock successful health checks
         with patch.object(
@@ -140,13 +143,21 @@ class TestAsyncIntegration:
     def test_metrics_collector_integration(self, metrics_collector):
         """Test metrics collector integration."""
         # Test various metric operations
-        metrics_collector.record_counter("files_processed", 1.0, {"status": "success", "type": ".md"})
-        metrics_collector.record_counter("files_processed", 1.0, {"status": "failed", "type": ".pdf"})
+        metrics_collector.record_counter(
+            "files_processed", 1.0, {"status": "success", "type": ".md"}
+        )
+        metrics_collector.record_counter(
+            "files_processed", 1.0, {"status": "failed", "type": ".pdf"}
+        )
         metrics_collector.record_counter("pdfs_generated", 1.0)
         metrics_collector.record_counter("pdfs_sent", 1.0, {"status": "success"})
         metrics_collector.record_counter("markdown_created", 1.0)
-        metrics_collector.record_counter("errors", 1.0, {"type": "FileProcessingError", "severity": "medium"})
-        metrics_collector.record_histogram("file_processing_duration", 1.5, {"type": ".md"})
+        metrics_collector.record_counter(
+            "errors", 1.0, {"type": "FileProcessingError", "severity": "medium"}
+        )
+        metrics_collector.record_histogram(
+            "file_processing_duration", 1.5, {"type": ".md"}
+        )
         metrics_collector.record_gauge("queue_size", 5.0)
         metrics_collector.record_gauge("active_tasks", 3.0)
 
@@ -169,15 +180,20 @@ class TestAsyncIntegration:
             "src.pdf_converter.MarkdownToPDFConverter"
         ), patch("src.pdf_converter.PDFToMarkdownConverter"), patch(
             "src.core.error_handler.ErrorHandler"
-        ), patch("src.core.async_processor.DatabaseManager", return_value=db_manager):
+        ), patch(
+            "src.core.async_processor.DatabaseManager", return_value=db_manager
+        ):
             # Create a mock FileValidator
             mock_file_validator = Mock()
             mock_file_validator._calculate_checksum.return_value = "test_hash"
             mock_file_validator.validate_file.return_value = Mock(
                 valid=True, checksum="test_hash"
             )
-            
-            with patch("src.core.async_processor.FileValidator", return_value=mock_file_validator):
+
+            with patch(
+                "src.core.async_processor.FileValidator",
+                return_value=mock_file_validator,
+            ):
                 processor = AsyncSyncProcessor(mock_config, max_workers=2)
 
             # Test processing a file
@@ -192,7 +208,7 @@ class TestAsyncIntegration:
                 assert processor.max_workers == 2
                 assert processor.file_validator is not None
                 assert processor.db_manager == db_manager
-                
+
                 # Verify initial statistics
                 assert processor.stats["files_processed"] == 0
                 assert processor.stats["files_successful"] == 0
@@ -256,10 +272,12 @@ class TestAsyncIntegration:
         # Verify file operations exist
         with db_manager.get_session() as session:
             from src.database.models import FileOperation
+
             operations = session.query(FileOperation).all()
             assert len(operations) == 2
 
             from src.database.models import SystemMetrics
+
             metrics = session.query(SystemMetrics).all()
             assert len(metrics) == 2
 
@@ -288,24 +306,30 @@ class TestAsyncIntegration:
 
         # Verify the update
         with db_manager.get_session() as session:
-            updated_file = (
-                session.query(ProcessedFile)
-                .filter_by(id=file_id)
-                .first()
-            )
+            updated_file = session.query(ProcessedFile).filter_by(id=file_id).first()
             assert updated_file.status == "retry_success"
             assert updated_file.processing_time_ms == 3000
 
     def test_metrics_collector_prometheus_format(self, metrics_collector):
         """Test that metrics collector produces valid Prometheus format."""
         # Add some test metrics
-        metrics_collector.record_counter("files_processed", 1.0, {"status": "success", "type": ".md"})
-        metrics_collector.record_counter("files_processed", 1.0, {"status": "success", "type": ".md"})
-        metrics_collector.record_counter("files_processed", 1.0, {"status": "failed", "type": ".pdf"})
+        metrics_collector.record_counter(
+            "files_processed", 1.0, {"status": "success", "type": ".md"}
+        )
+        metrics_collector.record_counter(
+            "files_processed", 1.0, {"status": "success", "type": ".md"}
+        )
+        metrics_collector.record_counter(
+            "files_processed", 1.0, {"status": "failed", "type": ".pdf"}
+        )
         metrics_collector.record_counter("pdfs_generated", 1.0)
         metrics_collector.record_counter("pdfs_sent", 1.0, {"status": "success"})
-        metrics_collector.record_counter("errors", 1.0, {"type": "FileProcessingError", "severity": "high"})
-        metrics_collector.record_histogram("file_processing_duration", 2.5, {"type": ".md"})
+        metrics_collector.record_counter(
+            "errors", 1.0, {"type": "FileProcessingError", "severity": "high"}
+        )
+        metrics_collector.record_histogram(
+            "file_processing_duration", 2.5, {"type": ".md"}
+        )
         metrics_collector.record_gauge("queue_size", 10.0)
         metrics_collector.record_gauge("active_tasks", 5.0)
 

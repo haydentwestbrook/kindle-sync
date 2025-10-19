@@ -5,7 +5,7 @@ Tests the PDF conversion between Markdown and PDF formats.
 """
 
 import tempfile
-from unittest.mock import Mock, mock_open, patch
+from unittest.mock import Mock, patch
 
 import pytest
 from pathlib import Path

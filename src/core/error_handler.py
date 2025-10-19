@@ -1,7 +1,7 @@
 """Centralized error handling and recovery system."""
 
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from loguru import logger
 
@@ -29,7 +29,7 @@ class ErrorHandler:
         self.max_recent_errors = 100
 
     def handle_error(
-        self, error: KindleSyncError, context: Optional[Dict[str, Any]] = None
+        self, error: KindleSyncError, context: dict[str, Any] | None = None
     ) -> bool:
         """
         Handle error with appropriate recovery strategy.
@@ -97,7 +97,7 @@ class ErrorHandler:
                 -self.max_recent_errors :
             ]
 
-    def _log_error(self, error: KindleSyncError, context: Dict[str, Any]) -> None:
+    def _log_error(self, error: KindleSyncError, context: dict[str, Any]) -> None:
         """Log error with appropriate level."""
         log_message = f"Error: {error}"
         if context:
@@ -115,7 +115,7 @@ class ErrorHandler:
             logger.info(log_message)
 
     def _attempt_recovery(
-        self, error: KindleSyncError, context: Dict[str, Any]
+        self, error: KindleSyncError, context: dict[str, Any]
     ) -> bool:
         """
         Attempt to recover from an error.
@@ -144,7 +144,7 @@ class ErrorHandler:
             return False
 
     def _recover_email_service(
-        self, error: EmailServiceError, context: Dict[str, Any]
+        self, error: EmailServiceError, context: dict[str, Any]
     ) -> bool:
         """Recover from email service errors."""
         logger.info("Attempting email service recovery...")
@@ -169,7 +169,7 @@ class ErrorHandler:
         return False
 
     def _recover_file_processing(
-        self, error: FileProcessingError, context: Dict[str, Any]
+        self, error: FileProcessingError, context: dict[str, Any]
     ) -> bool:
         """Recover from file processing errors."""
         logger.info("Attempting file processing recovery...")
@@ -194,7 +194,7 @@ class ErrorHandler:
         return False
 
     def _recover_configuration(
-        self, error: ConfigurationError, context: Dict[str, Any]
+        self, error: ConfigurationError, context: dict[str, Any]
     ) -> bool:
         """Recover from configuration errors."""
         logger.info("Attempting configuration recovery...")
@@ -220,7 +220,7 @@ class ErrorHandler:
 
     # Recovery strategy implementations
     def _retry_email_connection(
-        self, error: EmailServiceError, context: Dict[str, Any]
+        self, error: EmailServiceError, context: dict[str, Any]
     ) -> bool:
         """Retry email connection."""
         # Implementation would retry SMTP connection
@@ -228,66 +228,66 @@ class ErrorHandler:
         return True  # Placeholder
 
     def _fallback_email_service(
-        self, error: EmailServiceError, context: Dict[str, Any]
+        self, error: EmailServiceError, context: dict[str, Any]
     ) -> bool:
         """Use fallback email service."""
         logger.info("Using fallback email service...")
         return False  # No fallback implemented yet
 
     def _queue_email_for_later(
-        self, error: EmailServiceError, context: Dict[str, Any]
+        self, error: EmailServiceError, context: dict[str, Any]
     ) -> bool:
         """Queue email for later processing."""
         logger.info("Queueing email for later processing...")
         return True  # Placeholder - would implement email queue
 
     def _retry_file_operation(
-        self, error: FileProcessingError, context: Dict[str, Any]
+        self, error: FileProcessingError, context: dict[str, Any]
     ) -> bool:
         """Retry file operation."""
         logger.info("Retrying file operation...")
         return True  # Placeholder
 
     def _skip_corrupted_file(
-        self, error: FileProcessingError, context: Dict[str, Any]
+        self, error: FileProcessingError, context: dict[str, Any]
     ) -> bool:
         """Skip corrupted file and continue."""
         logger.info("Skipping corrupted file...")
         return True  # Placeholder
 
     def _backup_and_retry(
-        self, error: FileProcessingError, context: Dict[str, Any]
+        self, error: FileProcessingError, context: dict[str, Any]
     ) -> bool:
         """Backup file and retry operation."""
         logger.info("Backing up file and retrying...")
         return True  # Placeholder
 
     def _use_default_config(
-        self, error: ConfigurationError, context: Dict[str, Any]
+        self, error: ConfigurationError, context: dict[str, Any]
     ) -> bool:
         """Use default configuration values."""
         logger.info("Using default configuration values...")
         return True  # Placeholder
 
     def _reload_configuration(
-        self, error: ConfigurationError, context: Dict[str, Any]
+        self, error: ConfigurationError, context: dict[str, Any]
     ) -> bool:
         """Reload configuration from file."""
         logger.info("Reloading configuration...")
         return True  # Placeholder
 
     def _validate_and_fix_config(
-        self, error: ConfigurationError, context: Dict[str, Any]
+        self, error: ConfigurationError, context: dict[str, Any]
     ) -> bool:
         """Validate and fix configuration issues."""
         logger.info("Validating and fixing configuration...")
         return True  # Placeholder
 
-    def get_error_stats(self) -> Dict[str, Any]:
+    def get_error_stats(self) -> dict[str, Any]:
         """Get current error statistics."""
         return self.error_stats.copy()
 
-    def get_recent_errors(self, limit: int = 10) -> List[Dict[str, Any]]:
+    def get_recent_errors(self, limit: int = 10) -> list[dict[str, Any]]:
         """Get recent errors."""
         return self.error_stats["recent_errors"][-limit:]
 

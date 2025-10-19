@@ -2,10 +2,8 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
 
 from sqlalchemy import (
-    Boolean,
     Column,
     DateTime,
     Float,

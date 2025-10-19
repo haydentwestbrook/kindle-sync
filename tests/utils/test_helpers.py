@@ -5,7 +5,8 @@ import shutil
 import tempfile
 import time
 from contextlib import contextmanager
-from typing import Any, Callable, Dict, List
+from typing import Any
+from collections.abc import Callable
 from unittest.mock import Mock, patch
 
 from pathlib import Path
@@ -39,10 +40,10 @@ class TestHelpers:
             path.write_text(content)
 
     @staticmethod
-    def create_test_directory_structure(base_path: Path, structure: Dict[str, Any]):
+    def create_test_directory_structure(base_path: Path, structure: dict[str, Any]):
         """Create a directory structure for testing."""
 
-        def create_structure(current_structure: Dict[str, Any], current_path: Path):
+        def create_structure(current_structure: dict[str, Any], current_path: Path):
             for name, content in current_structure.items():
                 item_path = current_path / name
                 if isinstance(content, dict):
@@ -231,13 +232,13 @@ class TestAssertions:
         assert config.validate() is True
 
     @staticmethod
-    def assert_file_processed(file_path: Path, processed_files: List[Path]):
+    def assert_file_processed(file_path: Path, processed_files: list[Path]):
         """Assert that a file was processed."""
         assert file_path in processed_files, f"File {file_path} was not processed"
 
     @staticmethod
     def assert_statistics_updated(
-        stats: Dict[str, Any], expected_changes: Dict[str, int]
+        stats: dict[str, Any], expected_changes: dict[str, int]
     ):
         """Assert that statistics were updated correctly."""
         for key, expected_value in expected_changes.items():
@@ -356,7 +357,7 @@ class TestPerformanceHelpers:
     @staticmethod
     def benchmark_function(
         func: Callable, iterations: int = 100, *args, **kwargs
-    ) -> Dict[str, float]:
+    ) -> dict[str, float]:
         """Benchmark a function over multiple iterations."""
         times = []
         for _ in range(iterations):

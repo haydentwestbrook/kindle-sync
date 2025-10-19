@@ -7,7 +7,7 @@ Tracks content processing and conversion metrics.
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from loguru import logger
 
@@ -21,8 +21,8 @@ class ContentProcessingEvent:
     processing_time: float
     success: bool
     timestamp: datetime
-    user_id: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
+    user_id: str | None = None
+    metadata: dict[str, Any] | None = None
 
 
 class ContentAnalytics:
@@ -30,8 +30,8 @@ class ContentAnalytics:
 
     def __init__(self):
         """Initialize content analytics."""
-        self.processing_events: List[ContentProcessingEvent] = []
-        self.file_type_stats: Dict[str, Dict[str, Any]] = defaultdict(
+        self.processing_events: list[ContentProcessingEvent] = []
+        self.file_type_stats: dict[str, dict[str, Any]] = defaultdict(
             lambda: {
                 "total_files": 0,
                 "successful": 0,
@@ -49,8 +49,8 @@ class ContentAnalytics:
         file_type: str,
         processing_time: float,
         success: bool,
-        user_id: Optional[str] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        user_id: str | None = None,
+        metadata: dict[str, Any] | None = None,
     ):
         """
         Record a content processing event.
@@ -92,7 +92,7 @@ class ContentAnalytics:
 
         logger.debug(f"Recorded processing event: {file_path} ({file_type})")
 
-    def get_file_type_metrics(self, file_type: Optional[str] = None) -> Dict[str, Any]:
+    def get_file_type_metrics(self, file_type: str | None = None) -> dict[str, Any]:
         """
         Get metrics for a specific file type or all file types.
 
@@ -153,7 +153,7 @@ class ContentAnalytics:
 
             return all_metrics
 
-    def get_processing_trends(self, days: int = 30) -> Dict[str, List[Dict[str, Any]]]:
+    def get_processing_trends(self, days: int = 30) -> dict[str, list[dict[str, Any]]]:
         """
         Get processing trends over time.
 
@@ -225,7 +225,7 @@ class ContentAnalytics:
 
         return result
 
-    def get_performance_metrics(self, days: int = 30) -> Dict[str, Any]:
+    def get_performance_metrics(self, days: int = 30) -> dict[str, Any]:
         """
         Get performance metrics for content processing.
 
@@ -283,7 +283,7 @@ class ContentAnalytics:
             },
         }
 
-    def get_user_content_metrics(self, user_id: str, days: int = 30) -> Dict[str, Any]:
+    def get_user_content_metrics(self, user_id: str, days: int = 30) -> dict[str, Any]:
         """
         Get content processing metrics for a specific user.
 

@@ -6,9 +6,9 @@ Tracks business-relevant metrics like user engagement, content processing, and s
 
 import time
 from collections import defaultdict, deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from loguru import logger
 
@@ -21,7 +21,7 @@ class UserSession:
 
     user_id: str
     start_time: datetime
-    end_time: Optional[datetime] = None
+    end_time: datetime | None = None
     files_processed: int = 0
     emails_sent: int = 0
     errors_encountered: int = 0
@@ -56,7 +56,7 @@ class UserEngagement:
 class BusinessMetricsCollector:
     """Collects and manages business metrics."""
 
-    def __init__(self, metrics_collector: Optional[MetricsCollector] = None):
+    def __init__(self, metrics_collector: MetricsCollector | None = None):
         """
         Initialize business metrics collector.
 
@@ -64,7 +64,7 @@ class BusinessMetricsCollector:
             metrics_collector: System metrics collector for integration
         """
         self.metrics_collector = metrics_collector
-        self.user_sessions: Dict[str, UserSession] = {}
+        self.user_sessions: dict[str, UserSession] = {}
         self.content_metrics = ContentMetrics()
         self.user_engagement = UserEngagement()
 
@@ -73,14 +73,14 @@ class BusinessMetricsCollector:
         self.hourly_metrics: deque = deque(maxlen=168)  # Keep 1 week
 
         # User activity tracking
-        self.user_activity: Dict[str, List[datetime]] = defaultdict(list)
+        self.user_activity: dict[str, list[datetime]] = defaultdict(list)
         self.daily_users: set = set()
         self.weekly_users: set = set()
         self.monthly_users: set = set()
 
         # Content tracking
-        self.file_types: Dict[str, int] = defaultdict(int)
-        self.processing_times: List[float] = []
+        self.file_types: dict[str, int] = defaultdict(int)
+        self.processing_times: list[float] = []
 
         logger.info("Business metrics collector initialized")
 
@@ -289,7 +289,7 @@ class BusinessMetricsCollector:
 
         logger.debug("Updated daily business metrics")
 
-    def get_business_summary(self) -> Dict[str, Any]:
+    def get_business_summary(self) -> dict[str, Any]:
         """
         Get a summary of business metrics.
 
@@ -330,7 +330,7 @@ class BusinessMetricsCollector:
             },
         }
 
-    def get_trend_data(self, days: int = 30) -> List[Dict[str, Any]]:
+    def get_trend_data(self, days: int = 30) -> list[dict[str, Any]]:
         """
         Get trend data for the specified number of days.
 
@@ -348,11 +348,11 @@ class BusinessMetricsCollector:
 
 
 # Global business metrics collector instance
-_business_metrics: Optional[BusinessMetricsCollector] = None
+_business_metrics: BusinessMetricsCollector | None = None
 
 
 def initialize_business_metrics(
-    metrics_collector: Optional[MetricsCollector] = None,
+    metrics_collector: MetricsCollector | None = None,
 ) -> BusinessMetricsCollector:
     """
     Initialize global business metrics collector.
@@ -368,7 +368,7 @@ def initialize_business_metrics(
     return _business_metrics
 
 
-def get_business_metrics() -> Optional[BusinessMetricsCollector]:
+def get_business_metrics() -> BusinessMetricsCollector | None:
     """
     Get the global business metrics collector instance.
 

@@ -1,6 +1,6 @@
 """Main sync processor that coordinates all components."""
 
-from typing import Any, Dict, Optional
+from typing import Any
 
 from loguru import logger
 from pathlib import Path
@@ -141,7 +141,7 @@ class SyncProcessor:
             logger.error(f"Error processing PDF file {pdf_path}: {e}")
             raise
 
-    def sync_from_kindle(self, kindle_path: Optional[Path] = None) -> int:
+    def sync_from_kindle(self, kindle_path: Path | None = None) -> int:
         """Sync documents from Kindle to Obsidian."""
         try:
             synced_files = self.kindle_sync.sync_from_kindle(kindle_path)
@@ -158,7 +158,7 @@ class SyncProcessor:
             logger.error(f"Error syncing from Kindle: {e}")
             return 0
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get processing statistics."""
         return self.stats.copy()
 

@@ -3,9 +3,10 @@
 import asyncio
 import time
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any
+from collections.abc import Callable
 
 from loguru import logger
 from pathlib import Path
@@ -30,9 +31,9 @@ class HealthCheckResult:
 
     name: str
     status: HealthStatus
-    response_time_ms: Optional[int] = None
-    error_message: Optional[str] = None
-    metadata: Optional[Dict[str, Any]] = None
+    response_time_ms: int | None = None
+    error_message: str | None = None
+    metadata: dict[str, Any] | None = None
     timestamp: datetime = None
 
     def __post_init__(self):
@@ -43,7 +44,7 @@ class HealthCheckResult:
 class HealthChecker:
     """Centralized health check system."""
 
-    def __init__(self, config: Config, db_manager: Optional[DatabaseManager] = None):
+    def __init__(self, config: Config, db_manager: DatabaseManager | None = None):
         """
         Initialize health checker.
 
@@ -53,8 +54,8 @@ class HealthChecker:
         """
         self.config = config
         self.db_manager = db_manager
-        self.checks: Dict[str, Callable] = {}
-        self.check_timeouts: Dict[str, float] = {}
+        self.checks: dict[str, Callable] = {}
+        self.check_timeouts: dict[str, float] = {}
 
         # Register default health checks
         self._register_default_checks()
@@ -176,7 +177,7 @@ class HealthChecker:
 
             return result
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             response_time = int((time.time() - start_time) * 1000)
             result = HealthCheckResult(
                 name=name,
@@ -214,7 +215,7 @@ class HealthChecker:
 
             return result
 
-    async def run_all_checks(self) -> Dict[str, Any]:
+    async def run_all_checks(self) -> dict[str, Any]:
         """
         Run all registered health checks.
 
@@ -256,7 +257,7 @@ class HealthChecker:
             },
         }
 
-    def run_all_checks_sync(self) -> Dict[str, Any]:
+    def run_all_checks_sync(self) -> dict[str, Any]:
         """
         Synchronous version of run_all_checks for testing.
 
@@ -265,7 +266,7 @@ class HealthChecker:
         """
         return asyncio.run(self.run_all_checks())
 
-    def get_overall_status(self, results: Dict[str, HealthCheckResult]) -> HealthStatus:
+    def get_overall_status(self, results: dict[str, HealthCheckResult]) -> HealthStatus:
         """
         Determine overall system health status.
 

@@ -8,25 +8,24 @@ import asyncio
 import hashlib
 import json
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, Optional, Union
+from typing import Any
+from collections.abc import Callable
 
 from loguru import logger
-from pathlib import Path
 
 from .memory_cache import MemoryCache
-from .redis_cache import RedisCache
 
 
 class CacheBackend(ABC):
     """Abstract base class for cache backends."""
 
     @abstractmethod
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """Get a value from the cache."""
         pass
 
     @abstractmethod
-    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+    async def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
         """Set a value in the cache."""
         pass
 
@@ -46,7 +45,7 @@ class CacheBackend(ABC):
         pass
 
     @abstractmethod
-    async def get_stats(self) -> Dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         """Get cache statistics."""
         pass
 
@@ -54,7 +53,7 @@ class CacheBackend(ABC):
 class CacheManager:
     """Manages caching operations with support for multiple backends."""
 
-    def __init__(self, backend: Optional[CacheBackend] = None, default_ttl: int = 3600):
+    def __init__(self, backend: CacheBackend | None = None, default_ttl: int = 3600):
         """
         Initialize cache manager.
 
@@ -85,7 +84,7 @@ class CacheManager:
         except (TypeError, ValueError):
             return value
 
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         """
         Get a value from the cache.
 
@@ -108,7 +107,7 @@ class CacheManager:
             logger.error(f"Cache get error for key {key}: {e}")
             return None
 
-    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+    async def set(self, key: str, value: Any, ttl: int | None = None) -> bool:
         """
         Set a value in the cache.
 
@@ -182,7 +181,7 @@ class CacheManager:
             return False
 
     async def get_or_set(
-        self, key: str, factory: Callable, ttl: Optional[int] = None
+        self, key: str, factory: Callable, ttl: int | None = None
     ) -> Any:
         """
         Get a value from cache or set it using a factory function.
@@ -230,7 +229,7 @@ class CacheManager:
         logger.warning("Pattern invalidation not fully implemented for this backend")
         return 0
 
-    async def get_stats(self) -> Dict[str, Any]:
+    async def get_stats(self) -> dict[str, Any]:
         """
         Get cache statistics.
 
@@ -247,7 +246,7 @@ class CacheManager:
             logger.error(f"Cache stats error: {e}")
             return {"error": str(e)}
 
-    def create_key(self, *parts: Union[str, int, float]) -> str:
+    def create_key(self, *parts: str | int | float) -> str:
         """
         Create a cache key from multiple parts.
 
@@ -260,7 +259,7 @@ class CacheManager:
         key_parts = [str(part) for part in parts]
         return ":".join(key_parts)
 
-    def create_hash_key(self, *parts: Union[str, int, float]) -> str:
+    def create_hash_key(self, *parts: str | int | float) -> str:
         """
         Create a hash-based cache key from multiple parts.
 
@@ -275,11 +274,11 @@ class CacheManager:
 
 
 # Global cache manager instance
-_cache_manager: Optional[CacheManager] = None
+_cache_manager: CacheManager | None = None
 
 
 def initialize_cache_manager(
-    backend: Optional[CacheBackend] = None, default_ttl: int = 3600
+    backend: CacheBackend | None = None, default_ttl: int = 3600
 ) -> CacheManager:
     """
     Initialize global cache manager.
@@ -296,7 +295,7 @@ def initialize_cache_manager(
     return _cache_manager
 
 
-def get_cache_manager() -> Optional[CacheManager]:
+def get_cache_manager() -> CacheManager | None:
     """
     Get the global cache manager instance.
 

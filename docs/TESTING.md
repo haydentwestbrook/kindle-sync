@@ -196,28 +196,28 @@ from src.module import ClassToTest
 
 class TestClassToTest:
     """Test cases for ClassToTest."""
-    
+
     def test_method_success(self, fixture_name):
         """Test successful method execution."""
         # Arrange
         instance = ClassToTest()
-        
+
         # Act
         result = instance.method()
-        
+
         # Assert
         assert result is not None
         assert result == expected_value
-    
+
     def test_method_with_error(self):
         """Test method error handling."""
         # Arrange
         instance = ClassToTest()
-        
+
         # Act & Assert
         with pytest.raises(ValueError):
             instance.method_with_error()
-    
+
     @pytest.mark.slow
     def test_slow_method(self):
         """Test that takes a long time."""
@@ -249,9 +249,9 @@ def test_with_fixture(sample_config):
 def test_with_mock(mock_dependency):
     """Test with mocked external dependency."""
     mock_dependency.return_value = "mocked_value"
-    
+
     result = function_under_test()
-    
+
     assert result == "expected_result"
     mock_dependency.assert_called_once()
 ```
@@ -300,7 +300,7 @@ python_files = test_*.py *_test.py
 python_classes = Test*
 python_functions = test_*
 
-addopts = 
+addopts =
     --verbose
     --tb=short
     --strict-markers
@@ -398,11 +398,11 @@ def test_performance_critical_function():
 def test_function_performance():
     """Test that function runs within time limit."""
     import time
-    
+
     start_time = time.time()
     result = function_under_test()
     execution_time = time.time() - start_time
-    
+
     assert execution_time < 1.0  # Should complete within 1 second
     assert result is not None
 ```

@@ -4,9 +4,9 @@ Distributed tracing implementation using OpenTelemetry.
 Provides tracing capabilities for monitoring request flows across the application.
 """
 
-import os
 from contextlib import contextmanager
-from typing import Any, Dict, Generator, Optional
+from typing import Any
+from collections.abc import Generator
 
 from loguru import logger
 from opentelemetry import trace
@@ -24,7 +24,7 @@ class TracingManager:
     """Manages distributed tracing configuration and instrumentation."""
 
     def __init__(
-        self, service_name: str = "kindle-sync", config: Optional[Dict[str, Any]] = None
+        self, service_name: str = "kindle-sync", config: dict[str, Any] | None = None
     ):
         """
         Initialize tracing manager.
@@ -35,8 +35,8 @@ class TracingManager:
         """
         self.service_name = service_name
         self.config = config or {}
-        self.tracer_provider: Optional[TracerProvider] = None
-        self.tracer: Optional[Any] = None
+        self.tracer_provider: TracerProvider | None = None
+        self.tracer: Any | None = None
         self._instrumentors: list[Any] = []
 
     def setup_tracing(self) -> bool:
@@ -164,7 +164,7 @@ class TracingManager:
 
     @contextmanager
     def trace_span(
-        self, name: str, attributes: Optional[Dict[str, Any]] = None
+        self, name: str, attributes: dict[str, Any] | None = None
     ) -> Generator[Any, None, None]:
         """
         Context manager for creating a trace span.
@@ -187,7 +187,7 @@ class TracingManager:
             yield span
 
     def add_span_event(
-        self, name: str, attributes: Optional[Dict[str, Any]] = None
+        self, name: str, attributes: dict[str, Any] | None = None
     ) -> None:
         """
         Add an event to the current span.
@@ -213,7 +213,7 @@ class TracingManager:
             current_span.set_attribute(key, value)
 
     def set_span_status(
-        self, status_code: str, description: Optional[str] = None
+        self, status_code: str, description: str | None = None
     ) -> None:
         """
         Set the status of the current span.
@@ -234,11 +234,11 @@ class TracingManager:
 
 
 # Global tracing manager instance
-_tracing_manager: Optional[TracingManager] = None
+_tracing_manager: TracingManager | None = None
 
 
 def initialize_tracing(
-    service_name: str = "kindle-sync", config: Optional[Dict[str, Any]] = None
+    service_name: str = "kindle-sync", config: dict[str, Any] | None = None
 ) -> bool:
     """
     Initialize global tracing manager.
@@ -259,7 +259,7 @@ def initialize_tracing(
     return True
 
 
-def get_tracer() -> Optional[Any]:
+def get_tracer() -> Any | None:
     """
     Get the global tracer instance.
 
@@ -270,7 +270,7 @@ def get_tracer() -> Optional[Any]:
     return _tracing_manager.tracer if _tracing_manager else None
 
 
-def get_tracing_manager() -> Optional[TracingManager]:
+def get_tracing_manager() -> TracingManager | None:
     """
     Get the global tracing manager instance.
 

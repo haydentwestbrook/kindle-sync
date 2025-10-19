@@ -5,7 +5,7 @@ import tempfile
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from typing import Any, Dict, List, Optional
+from typing import Any
 from unittest.mock import Mock
 
 from pathlib import Path
@@ -93,7 +93,7 @@ class MockFactory:
     def create_mock_email_message(
         subject: str = "Test Subject",
         to: str = "test@kindle.com",
-        attachment_path: Optional[Path] = None,
+        attachment_path: Path | None = None,
     ) -> MIMEMultipart:
         """Create a mock email message."""
         msg = MIMEMultipart()
@@ -181,12 +181,12 @@ class MockFactory:
     @staticmethod
     def create_mock_ocr_result(
         text: str = "Extracted text", confidence: float = 85.0, language: str = "eng"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Create a mock OCR result."""
         return {"text": text, "confidence": confidence, "language": language}
 
     @staticmethod
-    def create_mock_pdf_images(count: int = 1) -> List[Mock]:
+    def create_mock_pdf_images(count: int = 1) -> list[Mock]:
         """Create mock PDF images."""
         images = []
         for i in range(count):
@@ -313,12 +313,12 @@ class MockDataGenerator:
 
     @staticmethod
     def generate_file_tree(
-        base_path: Path, structure: Dict[str, Any]
-    ) -> Dict[str, Path]:
+        base_path: Path, structure: dict[str, Any]
+    ) -> dict[str, Path]:
         """Generate a file tree structure."""
         created_paths = {}
 
-        def create_structure(current_structure: Dict[str, Any], current_path: Path):
+        def create_structure(current_structure: dict[str, Any], current_path: Path):
             for name, content in current_structure.items():
                 item_path = current_path / name
                 if isinstance(content, dict):
@@ -333,7 +333,7 @@ class MockDataGenerator:
         return created_paths
 
 
-def _get_nested_value(data: Dict[str, Any], key: str, default: Any = None) -> Any:
+def _get_nested_value(data: dict[str, Any], key: str, default: Any = None) -> Any:
     """Get a nested value from a dictionary using dot notation."""
     keys = key.split(".")
     value = data

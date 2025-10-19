@@ -1,7 +1,7 @@
 """File watcher for monitoring Obsidian vault changes."""
 
 import time
-from typing import Callable, List, Set
+from collections.abc import Callable
 
 from loguru import logger
 from pathlib import Path
@@ -18,7 +18,7 @@ class ObsidianFileHandler(FileSystemEventHandler):
         """Initialize the file handler."""
         self.config = config
         self.callback = callback
-        self.processed_files: Set[Path] = set()
+        self.processed_files: set[Path] = set()
         self.debounce_time = config.get("advanced.debounce_time", 2.0)
         self.pending_files: dict = {}
 
@@ -219,7 +219,7 @@ class ObsidianFileWatcher:
         except Exception:
             return False
 
-    def get_watched_paths(self) -> List[str]:
+    def get_watched_paths(self) -> list[str]:
         """Get the paths being watched."""
         watched_paths = set()
         if self.observer and hasattr(self.observer, "watches"):

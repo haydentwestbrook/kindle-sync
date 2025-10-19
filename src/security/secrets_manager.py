@@ -2,7 +2,7 @@
 
 import base64
 import os
-from typing import Any, Dict, Optional
+from typing import Any
 
 from cryptography.fernet import Fernet
 from loguru import logger
@@ -15,7 +15,7 @@ class SecretsManager:
     """Secure secrets management with encryption at rest."""
 
     def __init__(
-        self, key_path: Optional[Path] = None, config: Optional[Dict[str, Any]] = None
+        self, key_path: Path | None = None, config: dict[str, Any] | None = None
     ):
         """
         Initialize secrets manager.
@@ -92,7 +92,7 @@ class SecretsManager:
                 f"Failed to decrypt secret: {e}", severity=ErrorSeverity.HIGH
             )
 
-    def get_secret(self, key: str, default: Optional[str] = None) -> Optional[str]:
+    def get_secret(self, key: str, default: str | None = None) -> str | None:
         """
         Get secret from environment or encrypted storage.
 
@@ -200,8 +200,8 @@ class SecretsManager:
             return []
 
     def migrate_plaintext_secrets(
-        self, plaintext_config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, plaintext_config: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Migrate plaintext secrets to encrypted storage.
 
@@ -268,7 +268,7 @@ class SecretsManager:
         if keys[-1] in config:
             del config[keys[-1]]
 
-    def _get_nested_value(self, data: Dict[str, Any], key: str) -> Any:
+    def _get_nested_value(self, data: dict[str, Any], key: str) -> Any:
         """Get nested value using dot notation."""
         keys = key.split(".")
         value = data
@@ -280,7 +280,7 @@ class SecretsManager:
 
         return value
 
-    def _set_nested_value(self, data: Dict[str, Any], key: str, value: Any) -> None:
+    def _set_nested_value(self, data: dict[str, Any], key: str, value: Any) -> None:
         """Set nested value using dot notation."""
         keys = key.split(".")
         config = data

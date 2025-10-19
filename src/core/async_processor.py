@@ -5,7 +5,7 @@ import hashlib
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from loguru import logger
 from pathlib import Path
@@ -21,8 +21,6 @@ except ImportError:
     DatabaseManager = None
     ProcessingStatus = None
     DATABASE_AVAILABLE = False
-from ..core.exceptions import ErrorSeverity, FileProcessingError
-from ..core.retry import retry_on_file_error
 from ..security.validation import FileValidationRequest, FileValidator
 
 
@@ -32,10 +30,10 @@ class ProcessingResult:
 
     success: bool
     file_path: Path
-    processing_time_ms: Optional[int] = None
-    error_message: Optional[str] = None
-    output_path: Optional[Path] = None
-    metadata: Optional[Dict[str, Any]] = None
+    processing_time_ms: int | None = None
+    error_message: str | None = None
+    output_path: Path | None = None
+    metadata: dict[str, Any] | None = None
 
 
 class AsyncSyncProcessor:
@@ -53,7 +51,7 @@ class AsyncSyncProcessor:
         self.max_workers = max_workers
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
         self.processing_queue = asyncio.Queue(maxsize=1000)
-        self.active_tasks: Dict[str, asyncio.Task] = {}
+        self.active_tasks: dict[str, asyncio.Task] = {}
         self.file_validator = FileValidator()
 
         # Initialize database manager
@@ -389,8 +387,8 @@ class AsyncSyncProcessor:
         self,
         file_path: Path,
         status: ProcessingStatus,
-        processing_time_ms: Optional[int] = None,
-        error_message: Optional[str] = None,
+        processing_time_ms: int | None = None,
+        error_message: str | None = None,
         retry_count: int = 0,
     ):
         """Record processing result in database."""
@@ -412,7 +410,7 @@ class AsyncSyncProcessor:
         except Exception as e:
             logger.error(f"Failed to record processing result: {e}")
 
-    async def _get_file_id(self, file_path: Path) -> Optional[int]:
+    async def _get_file_id(self, file_path: Path) -> int | None:
         """Get file ID from database."""
         try:
             file_record = self.db_manager.get_file_processing_history(str(file_path))
@@ -427,7 +425,7 @@ class AsyncSyncProcessor:
         self,
         file_path: Path,
         priority: int = 0,
-        scheduled_for: Optional[datetime] = None,
+        scheduled_for: datetime | None = None,
     ):
         """Add file to processing queue."""
         try:
@@ -475,7 +473,7 @@ class AsyncSyncProcessor:
 
     # Statistics and monitoring
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get processing statistics."""
         db_stats = self.db_manager.get_processing_statistics()
 
@@ -488,7 +486,7 @@ class AsyncSyncProcessor:
             ),
         }
 
-    def get_health_status(self) -> Dict[str, Any]:
+    def get_health_status(self) -> dict[str, Any]:
         """Get health status of the processor."""
         return {
             "active_tasks": len(self.active_tasks),

@@ -4,11 +4,10 @@ Performance analytics for the Kindle Sync application.
 Tracks system performance and optimization metrics.
 """
 
-import time
 from collections import defaultdict, deque
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from loguru import logger
 
@@ -20,7 +19,7 @@ class PerformanceMetric:
     metric_name: str
     value: float
     timestamp: datetime
-    metadata: Optional[Dict[str, Any]] = None
+    metadata: dict[str, Any] | None = None
 
 
 class PerformanceAnalytics:
@@ -34,10 +33,10 @@ class PerformanceAnalytics:
             max_measurements: Maximum number of measurements to keep in memory
         """
         self.max_measurements = max_measurements
-        self.measurements: Dict[str, deque] = defaultdict(
+        self.measurements: dict[str, deque] = defaultdict(
             lambda: deque(maxlen=max_measurements)
         )
-        self.performance_events: List[PerformanceMetric] = []
+        self.performance_events: list[PerformanceMetric] = []
 
         # Performance thresholds
         self.thresholds = {
@@ -51,7 +50,7 @@ class PerformanceAnalytics:
         logger.info("Performance analytics initialized")
 
     def record_metric(
-        self, metric_name: str, value: float, metadata: Optional[Dict[str, Any]] = None
+        self, metric_name: str, value: float, metadata: dict[str, Any] | None = None
     ):
         """
         Record a performance metric.
@@ -80,7 +79,7 @@ class PerformanceAnalytics:
 
         logger.debug(f"Recorded metric: {metric_name} = {value}")
 
-    def get_metric_summary(self, metric_name: str, hours: int = 24) -> Dict[str, Any]:
+    def get_metric_summary(self, metric_name: str, hours: int = 24) -> dict[str, Any]:
         """
         Get summary statistics for a specific metric.
 
@@ -144,7 +143,7 @@ class PerformanceAnalytics:
 
     def get_performance_trends(
         self, metric_name: str, hours: int = 24
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Get performance trends for a specific metric.
 
@@ -185,7 +184,7 @@ class PerformanceAnalytics:
 
         return trend_data
 
-    def get_system_health_score(self, hours: int = 24) -> Dict[str, Any]:
+    def get_system_health_score(self, hours: int = 24) -> dict[str, Any]:
         """
         Calculate overall system health score.
 
@@ -240,7 +239,7 @@ class PerformanceAnalytics:
             "analysis_period_hours": hours,
         }
 
-    def get_performance_alerts(self, hours: int = 1) -> List[Dict[str, Any]]:
+    def get_performance_alerts(self, hours: int = 1) -> list[dict[str, Any]]:
         """
         Get performance alerts for metrics exceeding thresholds.
 
@@ -292,7 +291,7 @@ class PerformanceAnalytics:
 
         return alerts
 
-    def get_optimization_recommendations(self) -> List[Dict[str, Any]]:
+    def get_optimization_recommendations(self) -> list[dict[str, Any]]:
         """
         Generate performance optimization recommendations.
 

@@ -3,7 +3,7 @@
 import os
 import subprocess
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from pathlib import Path
 
@@ -11,13 +11,13 @@ from pathlib import Path
 class TestRunner:
     """Custom test runner with additional functionality."""
 
-    def __init__(self, test_dir: Optional[Path] = None):
+    def __init__(self, test_dir: Path | None = None):
         self.test_dir = test_dir or Path(__file__).parent.parent
         self.results = {}
 
     def run_unit_tests(
         self, verbose: bool = True, coverage: bool = True
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Run unit tests."""
         cmd = ["python", "-m", "pytest", "tests/unit/"]
 
@@ -29,14 +29,14 @@ class TestRunner:
 
         return self._run_tests("unit", cmd)
 
-    def run_integration_tests(self, verbose: bool = True) -> Dict[str, Any]:
+    def run_integration_tests(self, verbose: bool = True) -> dict[str, Any]:
         """Run integration tests."""
         cmd = ["python", "-m", "pytest", "tests/integration/", "-v" if verbose else ""]
         cmd = [c for c in cmd if c]  # Remove empty strings
 
         return self._run_tests("integration", cmd)
 
-    def run_e2e_tests(self, verbose: bool = True) -> Dict[str, Any]:
+    def run_e2e_tests(self, verbose: bool = True) -> dict[str, Any]:
         """Run end-to-end tests."""
         cmd = ["python", "-m", "pytest", "tests/e2e/", "-v" if verbose else ""]
         cmd = [c for c in cmd if c]  # Remove empty strings
@@ -45,7 +45,7 @@ class TestRunner:
 
     def run_all_tests(
         self, verbose: bool = True, coverage: bool = True
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Run all tests."""
         cmd = ["python", "-m", "pytest", "tests/"]
 
@@ -57,7 +57,7 @@ class TestRunner:
 
         return self._run_tests("all", cmd)
 
-    def run_specific_test(self, test_path: str, verbose: bool = True) -> Dict[str, Any]:
+    def run_specific_test(self, test_path: str, verbose: bool = True) -> dict[str, Any]:
         """Run a specific test file or test function."""
         cmd = ["python", "-m", "pytest", test_path]
 
@@ -67,8 +67,8 @@ class TestRunner:
         return self._run_tests("specific", cmd)
 
     def run_tests_with_markers(
-        self, markers: List[str], verbose: bool = True
-    ) -> Dict[str, Any]:
+        self, markers: list[str], verbose: bool = True
+    ) -> dict[str, Any]:
         """Run tests with specific markers."""
         cmd = ["python", "-m", "pytest", "tests/"]
 
@@ -80,17 +80,17 @@ class TestRunner:
 
         return self._run_tests(f"markers_{'_'.join(markers)}", cmd)
 
-    def run_performance_tests(self) -> Dict[str, Any]:
+    def run_performance_tests(self) -> dict[str, Any]:
         """Run performance tests."""
         cmd = ["python", "-m", "pytest", "tests/", "-m", "slow", "--benchmark-only"]
         return self._run_tests("performance", cmd)
 
-    def run_security_tests(self) -> Dict[str, Any]:
+    def run_security_tests(self) -> dict[str, Any]:
         """Run security tests."""
         cmd = ["python", "-m", "pytest", "tests/", "-m", "security"]
         return self._run_tests("security", cmd)
 
-    def _run_tests(self, test_type: str, cmd: List[str]) -> Dict[str, Any]:
+    def _run_tests(self, test_type: str, cmd: list[str]) -> dict[str, Any]:
         """Run tests with the given command."""
         start_time = time.time()
 
@@ -150,7 +150,7 @@ class TestRunner:
         finally:
             os.chdir(original_cwd)
 
-    def _parse_pytest_output(self, output: str) -> Dict[str, Any]:
+    def _parse_pytest_output(self, output: str) -> dict[str, Any]:
         """Parse pytest output for additional information."""
         info = {}
 
@@ -183,7 +183,7 @@ class TestRunner:
 
         return info
 
-    def get_test_summary(self) -> Dict[str, Any]:
+    def get_test_summary(self) -> dict[str, Any]:
         """Get a summary of all test results."""
         if not self.results:
             return {"message": "No tests have been run yet"}
@@ -210,7 +210,7 @@ class TestRunner:
             "test_types": list(self.results.keys()),
         }
 
-    def generate_report(self, output_file: Optional[Path] = None) -> str:
+    def generate_report(self, output_file: Path | None = None) -> str:
         """Generate a test report."""
         if not self.results:
             return "No test results available"
@@ -269,15 +269,15 @@ class TestSuiteRunner:
     def __init__(self):
         self.runner = TestRunner()
 
-    def run_quick_tests(self) -> Dict[str, Any]:
+    def run_quick_tests(self) -> dict[str, Any]:
         """Run quick tests (unit tests only, no slow tests)."""
         return self.runner.run_tests_with_markers(["unit", "not slow"])
 
-    def run_comprehensive_tests(self) -> Dict[str, Any]:
+    def run_comprehensive_tests(self) -> dict[str, Any]:
         """Run comprehensive tests (all tests with coverage)."""
         return self.runner.run_all_tests(verbose=True, coverage=True)
 
-    def run_ci_tests(self) -> Dict[str, Any]:
+    def run_ci_tests(self) -> dict[str, Any]:
         """Run tests suitable for CI/CD pipeline."""
         # Run unit and integration tests with coverage
         results = {}
@@ -291,11 +291,11 @@ class TestSuiteRunner:
         # Skip slow E2E tests in CI
         return results
 
-    def run_development_tests(self) -> Dict[str, Any]:
+    def run_development_tests(self) -> dict[str, Any]:
         """Run tests suitable for development."""
         return self.runner.run_tests_with_markers(["unit", "integration"])
 
-    def run_release_tests(self) -> Dict[str, Any]:
+    def run_release_tests(self) -> dict[str, Any]:
         """Run all tests for release validation."""
         return self.runner.run_all_tests(verbose=True, coverage=True)
 

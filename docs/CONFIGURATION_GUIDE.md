@@ -214,7 +214,7 @@ integrations:
     enabled: true
     webhook_url: "https://hooks.slack.com/..."
     channel: "#kindle-sync"
-  
+
   discord:
     enabled: false
     webhook_url: ""

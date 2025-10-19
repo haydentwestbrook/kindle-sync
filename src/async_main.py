@@ -9,7 +9,7 @@ asynchronous file processing.
 import asyncio
 import signal
 import sys
-from typing import Any, Optional
+from typing import Any
 
 from loguru import logger
 from pathlib import Path
@@ -28,17 +28,17 @@ from .monitoring.prometheus_exporter import MetricsUpdater, PrometheusExporter
 class AsyncKindleSyncApp:
     """Main async application class for Kindle Sync."""
 
-    def __init__(self, config_path: Optional[Path] = None):
+    def __init__(self, config_path: Path | None = None):
         self.config = Config(config_path)
-        self.db_manager: Optional[DatabaseManager] = None
-        self.processor: Optional[AsyncSyncProcessor] = None
-        self.file_watcher: Optional[AsyncFileWatcher] = None
-        self.health_checker: Optional[HealthChecker] = None
-        self.metrics_collector: Optional[MetricsCollector] = None
-        self.prometheus_exporter: Optional[PrometheusExporter] = None
-        self.metrics_updater: Optional[MetricsUpdater] = None
-        self.error_handler: Optional[ErrorHandler] = None
-        self.prometheus_runner: Optional[object] = None
+        self.db_manager: DatabaseManager | None = None
+        self.processor: AsyncSyncProcessor | None = None
+        self.file_watcher: AsyncFileWatcher | None = None
+        self.health_checker: HealthChecker | None = None
+        self.metrics_collector: MetricsCollector | None = None
+        self.prometheus_exporter: PrometheusExporter | None = None
+        self.metrics_updater: MetricsUpdater | None = None
+        self.error_handler: ErrorHandler | None = None
+        self.prometheus_runner: object | None = None
         self.running = False
         logger.info("AsyncKindleSyncApp initialized.")
 

@@ -1,8 +1,9 @@
 """Asynchronous file watcher with queue-based processing."""
 
 import asyncio
-from datetime import datetime, timedelta
-from typing import Any, Callable, Dict, Optional
+from datetime import datetime
+from typing import Any
+from collections.abc import Callable
 
 from loguru import logger
 from pathlib import Path
@@ -15,7 +16,7 @@ from watchdog.events import (
 from watchdog.observers import Observer
 
 from ..config import Config
-from .async_processor import AsyncSyncProcessor, ProcessingResult
+from .async_processor import AsyncSyncProcessor
 
 
 class AsyncFileHandler(FileSystemEventHandler):
@@ -24,7 +25,7 @@ class AsyncFileHandler(FileSystemEventHandler):
     def __init__(
         self,
         processing_queue: asyncio.Queue,
-        file_filter: Optional[Callable[[Path], bool]] = None,
+        file_filter: Callable[[Path], bool] | None = None,
     ):
         """
         Initialize async file handler.
@@ -35,7 +36,7 @@ class AsyncFileHandler(FileSystemEventHandler):
         """
         self.processing_queue = processing_queue
         self.file_filter = file_filter or self._default_file_filter
-        self.debounce_timers: Dict[str, asyncio.Task] = {}
+        self.debounce_timers: dict[str, asyncio.Task] = {}
         self.debounce_delay = 1.0  # 1 second debounce
 
     def _default_file_filter(self, file_path: Path) -> bool:
@@ -122,7 +123,7 @@ class AsyncFileWatcher:
         self.max_workers = max_workers
         self.debounce_delay = debounce_delay
 
-        self.observer: Optional[Observer] = None
+        self.observer: Observer | None = None
         self.processing_queue = asyncio.Queue(maxsize=1000)
         self.workers: list[asyncio.Task] = []
         self.running = False
@@ -139,7 +140,7 @@ class AsyncFileWatcher:
 
         logger.info(f"Async file watcher initialized with {max_workers} workers")
 
-    async def start(self, watch_path: Optional[Path] = None):
+    async def start(self, watch_path: Path | None = None):
         """
         Start async file watching.
 
@@ -246,7 +247,7 @@ class AsyncFileWatcher:
                     self.stats["queue_size"] = self.processing_queue.qsize()
                     self.processing_queue.task_done()
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 # No files in queue, continue
                 continue
             except Exception as e:
@@ -301,7 +302,7 @@ class AsyncFileWatcher:
             logger.error(f"Processing queue is full, cannot add {file_path}")
             return False
 
-    def get_statistics(self) -> Dict[str, Any]:
+    def get_statistics(self) -> dict[str, Any]:
         """Get file watcher statistics."""
         return {
             **self.stats,
@@ -310,7 +311,7 @@ class AsyncFileWatcher:
             "max_workers": self.max_workers,
         }
 
-    def get_health_status(self) -> Dict[str, Any]:
+    def get_health_status(self) -> dict[str, Any]:
         """Get health status of the file watcher."""
         return {
             "running": self.running,
@@ -323,7 +324,7 @@ class AsyncFileWatcher:
         }
 
     async def process_existing_files(
-        self, watch_path: Optional[Path] = None, max_files: int = 100
+        self, watch_path: Path | None = None, max_files: int = 100
     ):
         """
         Process existing files in the watch directory.

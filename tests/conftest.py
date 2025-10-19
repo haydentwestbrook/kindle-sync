@@ -9,7 +9,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import shutil  # noqa: E402
 import tempfile  # noqa: E402
-from typing import Any, Dict, Generator  # noqa: E402
+from typing import Any  # noqa: E402
+from collections.abc import Generator
 from unittest.mock import Mock  # noqa: E402
 
 import pytest  # noqa: E402
@@ -36,7 +37,7 @@ def temp_dir() -> Generator[Path, None, None]:
 
 
 @pytest.fixture
-def sample_config(obsidian_vault: Path) -> Dict[str, Any]:
+def sample_config(obsidian_vault: Path) -> dict[str, Any]:
     """Sample configuration for testing."""
     return {
         "obsidian": {
@@ -97,7 +98,7 @@ def sample_config(obsidian_vault: Path) -> Dict[str, Any]:
 
 
 @pytest.fixture
-def config_file(temp_dir: Path, sample_config: Dict[str, Any]) -> Path:
+def config_file(temp_dir: Path, sample_config: dict[str, Any]) -> Path:
     """Create a temporary config file for testing."""
     config_path = temp_dir / "test_config.yaml"
     with open(config_path, "w") as f:
@@ -292,7 +293,7 @@ def mock_kindle_device():
 
 
 @pytest.fixture
-def sample_file_tree(temp_dir: Path) -> Dict[str, Path]:
+def sample_file_tree(temp_dir: Path) -> dict[str, Path]:
     """Create a sample file tree for testing."""
     files = {}
 

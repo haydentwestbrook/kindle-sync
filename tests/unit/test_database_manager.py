@@ -5,13 +5,10 @@ Tests the database connection and operations management.
 """
 
 import tempfile
-from unittest.mock import Mock, patch
 
 import pytest
 from pathlib import Path
-from sqlalchemy.exc import SQLAlchemyError
 
-from src.core.exceptions import ErrorSeverity, KindleSyncError
 from src.database.manager import DatabaseManager
 from src.database.models import (
     FileOperation,

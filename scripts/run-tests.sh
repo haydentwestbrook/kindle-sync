@@ -66,32 +66,32 @@ EOF
 # Function to check dependencies
 check_dependencies() {
     print_status "Checking dependencies..."
-    
+
     # Check Python
     if ! command -v python3 &> /dev/null; then
         print_error "Python 3 is required but not installed"
         exit 1
     fi
-    
+
     # Check pip
     if ! command -v pip3 &> /dev/null; then
         print_error "pip3 is required but not installed"
         exit 1
     fi
-    
+
     # Check pytest
     if ! python3 -c "import pytest" &> /dev/null; then
         print_warning "pytest not found, installing test dependencies..."
         pip3 install -r requirements-test.txt
     fi
-    
+
     print_success "Dependencies check completed"
 }
 
 # Function to install system dependencies
 install_system_dependencies() {
     print_status "Installing system dependencies..."
-    
+
     # Detect OS
     if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         # Linux
@@ -115,14 +115,14 @@ install_system_dependencies() {
     else
         print_warning "Unsupported OS, skipping system dependencies"
     fi
-    
+
     print_success "System dependencies installation completed"
 }
 
 # Function to run tests
 run_tests() {
     local cmd="python3 -m pytest"
-    
+
     # Add test path based on type
     case $TEST_TYPE in
         "unit")
@@ -142,37 +142,37 @@ run_tests() {
             exit 1
             ;;
     esac
-    
+
     # Add markers if specified
     if [[ -n "$MARKERS" ]]; then
         cmd="$cmd -m \"$MARKERS\""
     fi
-    
+
     # Add verbose flag
     if [[ "$VERBOSE" == true ]]; then
         cmd="$cmd -v"
     fi
-    
+
     # Add coverage if requested
     if [[ "$COVERAGE" == true ]]; then
         cmd="$cmd --cov=src --cov-report=term-missing --cov-report=html"
     fi
-    
+
     # Add quick test markers
     if [[ "$QUICK" == true ]]; then
         cmd="$cmd -m \"unit and not slow\""
     fi
-    
+
     # Add CI markers
     if [[ "$CI" == true ]]; then
         cmd="$cmd -m \"unit or integration\""
     fi
-    
+
     # Add JUnit XML output
     cmd="$cmd --junitxml=test-results.xml"
-    
+
     print_status "Running command: $cmd"
-    
+
     # Execute the command
     if eval $cmd; then
         print_success "Tests completed successfully"
@@ -187,7 +187,7 @@ run_tests() {
 generate_report() {
     if [[ -n "$REPORT_FILE" ]]; then
         print_status "Generating test report..."
-        
+
         # Create report content
         cat > "$REPORT_FILE" << EOF
 # Kindle Scribe Sync - Test Report
@@ -204,16 +204,16 @@ Generated on: $(date)
 
 ## Test Results
 EOF
-        
+
         # Add test results if available
         if [[ -f "test-results.xml" ]]; then
             echo "- Test results XML: test-results.xml" >> "$REPORT_FILE"
         fi
-        
+
         if [[ -f "htmlcov/index.html" ]]; then
             echo "- Coverage report: htmlcov/index.html" >> "$REPORT_FILE"
         fi
-        
+
         print_success "Test report generated: $REPORT_FILE"
     fi
 }
@@ -221,13 +221,13 @@ EOF
 # Function to cleanup
 cleanup() {
     print_status "Cleaning up temporary files..."
-    
+
     # Remove temporary files
     rm -f test-results.xml
     rm -rf .pytest_cache
     rm -rf htmlcov
     rm -rf .coverage
-    
+
     print_success "Cleanup completed"
 }
 
@@ -277,35 +277,35 @@ done
 # Main execution
 main() {
     print_status "Starting Kindle Scribe Sync test suite..."
-    
+
     # Check dependencies
     check_dependencies
-    
+
     # Install system dependencies if needed
     if [[ "$TEST_TYPE" == "all" || "$TEST_TYPE" == "integration" || "$TEST_TYPE" == "e2e" ]]; then
         install_system_dependencies
     fi
-    
+
     # Run tests
     if run_tests; then
         print_success "All tests passed!"
-        
+
         # Generate report
         generate_report
-        
+
         # Cleanup
         cleanup
-        
+
         exit 0
     else
         print_error "Some tests failed!"
-        
+
         # Generate report even on failure
         generate_report
-        
+
         # Cleanup
         cleanup
-        
+
         exit 1
     fi
 }

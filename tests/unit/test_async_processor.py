@@ -4,17 +4,15 @@ Unit tests for AsyncSyncProcessor.
 Tests the asynchronous file processing functionality.
 """
 
-import asyncio
 import os
 import tempfile
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 from pathlib import Path
 
 from src.config import Config
-from src.core.async_processor import AsyncSyncProcessor, ProcessingResult
-from src.core.exceptions import EmailServiceError, ErrorSeverity, FileProcessingError
+from src.core.async_processor import AsyncSyncProcessor
 from src.database.manager import DatabaseManager
 
 

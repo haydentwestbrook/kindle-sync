@@ -4,8 +4,8 @@ import asyncio
 import time
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
-from typing import Any, Callable, Dict, List, Optional
+from datetime import datetime
+from typing import Any
 from unittest.mock import Mock
 
 from loguru import logger
@@ -28,8 +28,8 @@ class Metric:
     name: str
     value: float
     timestamp: datetime
-    tags: Dict[str, str] = field(default_factory=dict)
-    unit: Optional[str] = None
+    tags: dict[str, str] = field(default_factory=dict)
+    unit: str | None = None
 
 
 class MetricsCollector:
@@ -37,8 +37,8 @@ class MetricsCollector:
 
     def __init__(
         self,
-        config: Optional[Config] = None,
-        db_manager: Optional[DatabaseManager] = None,
+        config: Config | None = None,
+        db_manager: DatabaseManager | None = None,
     ):
         """
         Initialize metrics collector.
@@ -51,10 +51,10 @@ class MetricsCollector:
         self.db_manager = db_manager if DATABASE_AVAILABLE else None
 
         # In-memory metrics storage
-        self.metrics: Dict[str, deque] = defaultdict(lambda: deque(maxlen=1000))
-        self.counters: Dict[str, float] = defaultdict(float)
-        self.gauges: Dict[str, float] = defaultdict(float)
-        self.histograms: Dict[str, List[float]] = defaultdict(list)
+        self.metrics: dict[str, deque] = defaultdict(lambda: deque(maxlen=1000))
+        self.counters: dict[str, float] = defaultdict(float)
+        self.gauges: dict[str, float] = defaultdict(float)
+        self.histograms: dict[str, list[float]] = defaultdict(list)
 
         # Collection settings
         self.collection_interval = config.get(
@@ -63,7 +63,7 @@ class MetricsCollector:
         self.retention_days = config.get("monitoring.metrics_retention_days", 7)
 
         # Background collection task
-        self.collection_task: Optional[asyncio.Task] = None
+        self.collection_task: asyncio.Task | None = None
         self.running = False
 
         logger.info("Metrics collector initialized")
@@ -237,7 +237,7 @@ class MetricsCollector:
     # Metric recording methods
 
     def record_counter(
-        self, name: str, value: float = 1.0, tags: Optional[Dict[str, str]] = None
+        self, name: str, value: float = 1.0, tags: dict[str, str] | None = None
     ):
         """Record a counter metric (monotonically increasing)."""
         self.counters[name] += value
@@ -247,15 +247,15 @@ class MetricsCollector:
         self,
         name: str,
         value: float,
-        tags: Optional[Dict[str, str]] = None,
-        unit: Optional[str] = None,
+        tags: dict[str, str] | None = None,
+        unit: str | None = None,
     ):
         """Record a gauge metric (can go up or down)."""
         self.gauges[name] = value
         self._record_metric(name, value, tags, "gauge", unit)
 
     def record_histogram(
-        self, name: str, value: float, tags: Optional[Dict[str, str]] = None
+        self, name: str, value: float, tags: dict[str, str] | None = None
     ):
         """Record a histogram metric (distribution of values)."""
         self.histograms[name].append(value)
@@ -266,7 +266,7 @@ class MetricsCollector:
         self._record_metric(name, value, tags, "histogram")
 
     def record_timing(
-        self, name: str, duration_ms: float, tags: Optional[Dict[str, str]] = None
+        self, name: str, duration_ms: float, tags: dict[str, str] | None = None
     ):
         """Record a timing metric (duration in milliseconds)."""
         self.record_histogram(name, duration_ms, tags)
@@ -276,9 +276,9 @@ class MetricsCollector:
         self,
         name: str,
         value: float,
-        tags: Optional[Dict[str, str]],
+        tags: dict[str, str] | None,
         metric_type: str,
-        unit: Optional[str] = None,
+        unit: str | None = None,
     ):
         """Record a metric in memory and optionally in database."""
         metric = Metric(
@@ -309,7 +309,7 @@ class MetricsCollector:
         """Get current gauge value."""
         return self.gauges.get(name, 0.0)
 
-    def get_histogram_stats(self, name: str) -> Dict[str, float]:
+    def get_histogram_stats(self, name: str) -> dict[str, float]:
         """Get histogram statistics."""
         values = self.histograms.get(name, [])
         if not values:
@@ -336,7 +336,7 @@ class MetricsCollector:
             "p99": sorted_values[int(count * 0.99)],
         }
 
-    def get_metrics_summary(self) -> Dict[str, Any]:
+    def get_metrics_summary(self) -> dict[str, Any]:
         """Get summary of all metrics."""
         return {
             "counters": dict(self.counters),
@@ -348,7 +348,7 @@ class MetricsCollector:
             "collection_running": self.running,
         }
 
-    def get_metric_history(self, name: str, limit: int = 100) -> List[Metric]:
+    def get_metric_history(self, name: str, limit: int = 100) -> list[Metric]:
         """Get recent history for a specific metric."""
         return list(self.metrics.get(name, []))[-limit:]
 
@@ -361,7 +361,7 @@ class MetricsCollector:
             self,
             collector: "MetricsCollector",
             name: str,
-            tags: Optional[Dict[str, str]] = None,
+            tags: dict[str, str] | None = None,
         ):
             self.collector = collector
             self.name = name
@@ -377,7 +377,7 @@ class MetricsCollector:
                 duration_ms = (time.time() - self.start_time) * 1000
                 self.collector.record_timing(self.name, duration_ms, self.tags)
 
-    def timer(self, name: str, tags: Optional[Dict[str, str]] = None) -> Timer:
+    def timer(self, name: str, tags: dict[str, str] | None = None) -> Timer:
         """Create a timer context manager."""
         return self.Timer(self, name, tags)
 
