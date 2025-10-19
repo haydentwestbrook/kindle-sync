@@ -20,8 +20,8 @@ class MarkdownToPDFConverter:
     def __init__(self, config: Config):
         """Initialize the PDF converter."""
         self.config = config
-        self.pdf_config = config.get_pdf_config()
-        self.markdown_config = config.get_markdown_config()
+        self.pdf_config = config.get("processing.pdf", {})
+        self.markdown_config = config.get("processing.markdown", {})
 
         # Set up page size
         page_size_name = self.pdf_config.get("page_size", "A4").upper()

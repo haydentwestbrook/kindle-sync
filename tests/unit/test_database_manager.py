@@ -32,13 +32,13 @@ class TestDatabaseManager:
     @pytest.fixture
     def db_manager(self, temp_db_path):
         """Create a DatabaseManager instance with temporary database."""
-        return DatabaseManager(temp_db_path)
+        return DatabaseManager(str(temp_db_path))
 
     def test_database_initialization(self, temp_db_path):
         """Test database initialization."""
-        db_manager = DatabaseManager(temp_db_path)
+        db_manager = DatabaseManager(str(temp_db_path))
 
-        assert db_manager.db_path == temp_db_path
+        assert db_manager.database_url == str(temp_db_path)
         assert db_manager.engine is not None
         assert db_manager.Session is not None
 

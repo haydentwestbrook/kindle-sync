@@ -41,16 +41,22 @@ class TestObsidianFileWatcher:
             yield Path(temp_dir)
 
     @pytest.fixture
-    def file_watcher(self, mock_config):
+    def mock_callback(self):
+        """Create a mock callback function."""
+        return Mock()
+
+    @pytest.fixture
+    def file_watcher(self, mock_config, mock_callback):
         """Create a ObsidianFileWatcher instance."""
         with patch("src.file_watcher.Observer"):
-            return ObsidianFileWatcher(mock_config)
+            return ObsidianFileWatcher(mock_config, mock_callback)
 
-    def test_file_watcher_initialization(self, mock_config):
+    def test_file_watcher_initialization(self, mock_config, mock_callback):
         """Test file watcher initialization."""
         with patch("src.file_watcher.Observer"):
-            watcher = ObsidianFileWatcher(mock_config)
+            watcher = ObsidianFileWatcher(mock_config, mock_callback)
             assert watcher.config == mock_config
+            assert watcher.callback == mock_callback
             assert watcher.observer is not None
 
     def test_start_watching_success(self, file_watcher, temp_directory):
