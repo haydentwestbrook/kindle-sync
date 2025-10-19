@@ -63,17 +63,17 @@ show_resources() {
 # Main monitoring loop
 main() {
     local pi_ip="$1"
-    
+
     while true; do
         clear
         echo -e "${BLUE}=== Kindle Sync Deployment Monitor ===${NC}"
         echo -e "${CYAN}Time: $(date)${NC}"
         echo ""
-        
+
         check_status "$pi_ip"
         show_resources
         monitor_logs
-        
+
         echo -e "${YELLOW}Refreshing in 5 seconds... (Ctrl+C to stop)${NC}"
         sleep 5
     done

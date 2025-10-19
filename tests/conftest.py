@@ -9,8 +9,8 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 import shutil  # noqa: E402
 import tempfile  # noqa: E402
-from typing import Any  # noqa: E402
 from collections.abc import Generator
+from typing import Any  # noqa: E402
 from unittest.mock import Mock  # noqa: E402
 
 import pytest  # noqa: E402

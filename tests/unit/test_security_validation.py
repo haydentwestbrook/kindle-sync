@@ -5,10 +5,7 @@ import tempfile
 import pytest
 from pathlib import Path
 
-from src.security.validation import (
-    FileValidationRequest,
-    FileValidator,
-)
+from src.security.validation import FileValidationRequest, FileValidator
 
 
 class TestFileValidationRequest:

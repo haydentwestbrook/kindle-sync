@@ -8,8 +8,8 @@ import asyncio
 import hashlib
 import json
 from abc import ABC, abstractmethod
-from typing import Any
 from collections.abc import Callable
+from typing import Any
 
 from loguru import logger
 

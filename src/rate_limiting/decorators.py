@@ -6,8 +6,8 @@ Provides decorators for automatic rate limiting of functions.
 
 import asyncio
 import functools
-from typing import Any
 from collections.abc import Callable
+from typing import Any
 
 from loguru import logger
 

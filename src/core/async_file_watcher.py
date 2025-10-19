@@ -1,9 +1,9 @@
 """Asynchronous file watcher with queue-based processing."""
 
 import asyncio
+from collections.abc import Callable
 from datetime import datetime
 from typing import Any
-from collections.abc import Callable
 
 from loguru import logger
 from pathlib import Path

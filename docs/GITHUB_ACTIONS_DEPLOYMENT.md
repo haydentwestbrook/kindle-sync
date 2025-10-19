@@ -122,7 +122,7 @@ Ensure your Pi is accessible from the internet or configure port forwarding:
 
 ### Automatic Deployment (on push to main):
 1. **Test Phase**: Run linting, type checking, and unit tests
-2. **Deploy Phase**: 
+2. **Deploy Phase**:
    - Test SSH connection
    - Update system packages
    - Install dependencies

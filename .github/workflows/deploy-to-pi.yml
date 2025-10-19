@@ -95,7 +95,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Deploy to Raspberry Pi
     environment: ${{ env.DEPLOYMENT_ENV }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -126,7 +126,7 @@ jobs:
         run: |
           echo "🔄 Updating system packages..."
           ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
-            sudo apt update && 
+            sudo apt update &&
             sudo apt upgrade -y
           "
 

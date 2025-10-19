@@ -6,8 +6,8 @@ Provides decorators to automatically create trace spans for functions and method
 
 import asyncio
 import functools
-from typing import Any
 from collections.abc import Callable
+from typing import Any
 
 from opentelemetry import trace
 

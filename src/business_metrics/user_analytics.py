@@ -91,9 +91,7 @@ class UserAnalytics:
 
         # Calculate metrics
         total_activities = len(user_activities)
-        active_days = len(
-            {activity.timestamp.date() for activity in user_activities}
-        )
+        active_days = len({activity.timestamp.date() for activity in user_activities})
         average_activities_per_day = total_activities / max(1, active_days)
 
         # Most common activity type

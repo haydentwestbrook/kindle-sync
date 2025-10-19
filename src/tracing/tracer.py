@@ -4,9 +4,9 @@ Distributed tracing implementation using OpenTelemetry.
 Provides tracing capabilities for monitoring request flows across the application.
 """
 
+from collections.abc import Generator
 from contextlib import contextmanager
 from typing import Any
-from collections.abc import Generator
 
 from loguru import logger
 from opentelemetry import trace
@@ -212,9 +212,7 @@ class TracingManager:
         if current_span and current_span.is_recording():
             current_span.set_attribute(key, value)
 
-    def set_span_status(
-        self, status_code: str, description: str | None = None
-    ) -> None:
+    def set_span_status(self, status_code: str, description: str | None = None) -> None:
         """
         Set the status of the current span.
 

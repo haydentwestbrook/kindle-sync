@@ -4,9 +4,9 @@ import os
 import shutil
 import tempfile
 import time
+from collections.abc import Callable
 from contextlib import contextmanager
 from typing import Any
-from collections.abc import Callable
 from unittest.mock import Mock, patch
 
 from pathlib import Path

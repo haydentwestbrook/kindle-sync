@@ -148,15 +148,15 @@ SSH_CMD="$SSH_CMD -p $PI_PORT $PI_USER@$PI_IP"
 run_on_pi() {
     local cmd="$1"
     local description="$2"
-    
+
     if [ -n "$description" ]; then
         log_step "Executing: $description"
     else
         log_step "Executing: $cmd"
     fi
-    
+
     log_debug "SSH Command: $SSH_CMD \"$cmd\""
-    
+
     if [ "$VERBOSE" = true ]; then
         log_debug "Command output:"
         if $SSH_CMD "$cmd" 2>&1 | tee -a deployment.log; then
@@ -180,21 +180,21 @@ copy_to_pi() {
     local src="$1"
     local dst="$2"
     local description="$3"
-    
+
     if [ -n "$description" ]; then
         log_step "Copying: $description"
     else
         log_step "Copying $src to Pi:$dst"
     fi
-    
+
     local scp_cmd="scp -r"
     if [ -n "$SSH_KEY" ]; then
         scp_cmd="$scp_cmd -i $SSH_KEY"
     fi
     scp_cmd="$scp_cmd -P $PI_PORT $src $PI_USER@$PI_IP:$dst"
-    
+
     log_debug "SCP Command: $scp_cmd"
-    
+
     if eval $scp_cmd >> deployment.log 2>&1; then
         log_success "File copy completed successfully"
     else
@@ -215,7 +215,7 @@ wait_for_network() {
     log_step "Checking network connectivity to Pi"
     local max_attempts=10
     local attempt=1
-    
+
     while [ $attempt -le $max_attempts ]; do
         log_debug "Ping attempt $attempt/$max_attempts"
         if ping -c 1 -W 5 "$PI_IP" >/dev/null 2>&1; then
@@ -227,7 +227,7 @@ wait_for_network() {
             ((attempt++))
         fi
     done
-    
+
     log_error "Failed to establish network connectivity after $max_attempts attempts"
     return 1
 }
@@ -237,7 +237,7 @@ check_ssh_connectivity() {
     log_step "Testing SSH connection to Pi"
     local max_attempts=5
     local attempt=1
-    
+
     while [ $attempt -le $max_attempts ]; do
         log_debug "SSH connection attempt $attempt/$max_attempts"
         if run_on_pi "echo 'SSH connection successful'" "Test SSH connection" >/dev/null 2>&1; then
@@ -249,7 +249,7 @@ check_ssh_connectivity() {
             ((attempt++))
         fi
     done
-    
+
     log_error "Failed to establish SSH connection after $max_attempts attempts"
     log_error "Please check:"
     log_error "  - IP address: $PI_IP"
@@ -262,7 +262,7 @@ check_ssh_connectivity() {
 # Function to get system info from Pi
 get_system_info() {
     log_step "Gathering system information from Pi"
-    
+
     log_info "System Information:"
     run_on_pi "uname -a" "Get system info" || true
     run_on_pi "cat /etc/os-release" "Get OS info" || true
@@ -276,25 +276,25 @@ deploy_to_pi() {
     log_info "Starting Kindle Scribe Sync deployment to Raspberry Pi"
     log_info "Target: $PI_USER@$PI_IP:$PI_DIR"
     log_info "Verbose mode: $VERBOSE"
-    
+
     # Wait for network connectivity
     if ! wait_for_network; then
         exit 1
     fi
-    
+
     # Check SSH connectivity
     if ! check_ssh_connectivity; then
         exit 1
     fi
-    
+
     # Get system information
     get_system_info
-    
+
     # Update system
     log_step "Updating Raspberry Pi system packages"
     run_on_pi "sudo apt update" "Update package lists"
     run_on_pi "sudo apt upgrade -y" "Upgrade packages"
-    
+
     # Install Git if not present
     if ! check_command_on_pi "git"; then
         log_step "Installing Git"
@@ -302,7 +302,7 @@ deploy_to_pi() {
     else
         log_success "Git is already installed"
     fi
-    
+
     # Clone or update repository
     log_step "Setting up repository"
     if run_on_pi "[ -d '$PI_DIR' ]" "Check if repository exists" >/dev/null 2>&1; then
@@ -312,29 +312,29 @@ deploy_to_pi() {
         log_info "Cloning repository..."
         run_on_pi "git clone https://github.com/haydentwestbrook/kindle-sync.git $PI_DIR" "Clone repository"
     fi
-    
+
     # Set up Python environment
     log_step "Setting up Python virtual environment"
     run_on_pi "cd $PI_DIR && python3 -m venv venv" "Create virtual environment"
     run_on_pi "cd $PI_DIR && source venv/bin/activate && pip install --upgrade pip" "Upgrade pip"
-    
+
     log_step "Installing Python dependencies"
     run_on_pi "cd $PI_DIR && source venv/bin/activate && pip install -r requirements.txt" "Install Python packages"
-    
+
     # Install system dependencies
     log_step "Installing system dependencies"
     run_on_pi "sudo apt install -y tesseract-ocr tesseract-ocr-eng poppler-utils" "Install OCR and PDF tools"
-    
+
     # Set up configuration if not skipping
     if [ "$SKIP_CONFIG" = false ]; then
         log_step "Setting up configuration"
-        
+
         # Create config if it doesn't exist
         if ! run_on_pi "[ -f '$PI_DIR/config.yaml' ]" "Check if config exists" >/dev/null 2>&1; then
             log_info "Creating configuration file..."
             run_on_pi "cd $PI_DIR && cp config.yaml.example config.yaml" "Create config from example"
         fi
-        
+
         # Create directories
         log_info "Creating necessary directories..."
         run_on_pi "mkdir -p $PI_DIR/logs $PI_DIR/backups $PI_DIR/temp" "Create application directories"
@@ -342,23 +342,23 @@ deploy_to_pi() {
         run_on_pi "mkdir -p /home/$PI_USER/obsidian-vault/'Kindle Sync'" "Create sync folder"
         run_on_pi "mkdir -p /home/$PI_USER/obsidian-vault/Templates" "Create templates folder"
         run_on_pi "mkdir -p /home/$PI_USER/obsidian-vault/Backups" "Create backups folder"
-        
+
         # Set permissions
         run_on_pi "sudo chown -R $PI_USER:$PI_USER $PI_DIR" "Set ownership of app directory"
         run_on_pi "sudo chown -R $PI_USER:$PI_USER /home/$PI_USER/obsidian-vault" "Set ownership of vault directory"
     fi
-    
+
     # Make scripts executable
     log_step "Setting up scripts"
     run_on_pi "cd $PI_DIR && chmod +x scripts/*.sh" "Make scripts executable"
     run_on_pi "cd $PI_DIR && chmod +x simple_sync.py" "Make sync script executable"
-    
+
     # Test the deployment
     log_step "Testing deployment"
     run_on_pi "cd $PI_DIR && source venv/bin/activate && python -c 'import pytesseract; print(\"Tesseract available\")'" "Test Tesseract"
     run_on_pi "cd $PI_DIR && source venv/bin/activate && python -c 'import pdf2image; print(\"PDF2Image available\")'" "Test PDF2Image"
     run_on_pi "cd $PI_DIR && source venv/bin/activate && python -c 'import reportlab; print(\"ReportLab available\")'" "Test ReportLab"
-    
+
     log_success "Deployment completed successfully!"
     log_info "Next steps:"
     log_info "1. SSH into your Pi: ssh $PI_USER@$PI_IP"

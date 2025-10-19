@@ -1,12 +1,11 @@
 """Retry mechanisms with exponential backoff."""
 
 import time
+from collections.abc import Callable
 from functools import wraps
 from typing import Any
-from collections.abc import Callable
 
 from loguru import logger
-
 
 
 def with_retry(

@@ -7,8 +7,8 @@ Provides decorators for automatic caching of function results.
 import functools
 import hashlib
 import inspect
-from typing import Any
 from collections.abc import Callable
+from typing import Any
 
 from loguru import logger
 

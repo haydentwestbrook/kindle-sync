@@ -428,9 +428,7 @@ class EmailReceiver:
             logger.error(f"Error decoding header: {e}")
             return str(header_value)
 
-    def _save_pdf_attachment(
-        self, part, filename: str, email_id: bytes
-    ) -> Path | None:
+    def _save_pdf_attachment(self, part, filename: str, email_id: bytes) -> Path | None:
         """Save PDF attachment to sync folder."""
         try:
             # Generate unique filename with timestamp

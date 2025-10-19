@@ -33,7 +33,7 @@ jobs:
   manage-service:
     runs-on: ubuntu-latest
     name: Manage Service
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
