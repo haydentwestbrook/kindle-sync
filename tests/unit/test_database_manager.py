@@ -13,7 +13,7 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from src.core.exceptions import KindleSyncError, ErrorSeverity
 from src.database.manager import DatabaseManager
-from src.database.models import FileOperation, ProcessedFile, SystemSystemMetricss
+from src.database.models import FileOperation, ProcessedFile, SystemMetrics
 
 
 class TestDatabaseManager:
