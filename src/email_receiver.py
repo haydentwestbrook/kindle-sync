@@ -723,7 +723,7 @@ class EmailReceiver:
         """Check if email has already been processed."""
         if not self.prevent_duplicates:
             return False
-        
+
         try:
             tracking_file_path = self.config.get(
                 "email_receiving.duplicate_tracking_file"
@@ -735,7 +735,7 @@ class EmailReceiver:
                             return True
         except Exception as e:
             logger.error(f"Error checking duplicate email: {e}")
-        
+
         return False
 
     def _record_processed_email(self, email_id):
