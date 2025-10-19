@@ -12,7 +12,7 @@ import pytest
 from pathlib import Path
 
 from src.config import Config
-from src.core.exceptions import ErrorSeverity, HealthCheckError
+from src.core.exceptions import ErrorSeverity, KindleSyncError
 from src.database.manager import DatabaseManager
 from src.monitoring.health_checks import HealthChecker
 

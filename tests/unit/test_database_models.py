@@ -10,7 +10,7 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from src.database.models import Base, FileOperation, Metric, ProcessedFile
+from src.database.models import Base, FileOperation, ProcessedFile, SystemMetrics
 
 
 class TestDatabaseModels:
