@@ -285,11 +285,17 @@ class Config:
 
     def get_smtp_config(self) -> Dict[str, Any]:
         """Get SMTP configuration with secrets management."""
+        # Try both config formats for backward compatibility
+        server = self.get("kindle.smtp_server") or self.get("smtp.host", "")
+        port = self.get("kindle.smtp_port") or self.get("smtp.port", 587)
+        username = self.get("kindle.smtp_username") or self.get("smtp.username", "")
+        password = self._get_smtp_password()
+        
         return {
-            "server": self.get("kindle.smtp_server", ""),
-            "port": self.get("kindle.smtp_port", 587),
-            "username": self.get("kindle.smtp_username", ""),
-            "password": self._get_smtp_password(),
+            "server": server,
+            "port": port,
+            "username": username,
+            "password": password,
         }
 
     def _get_smtp_password(self) -> str:
@@ -299,8 +305,24 @@ class Config:
         if password:
             return password
 
-        # Fallback to direct config (for backward compatibility)
-        return self.get("kindle.smtp_password", "")
+        # Fallback to direct config (try both formats)
+        return self.get("kindle.smtp_password") or self.get("smtp.password", "")
+
+    def get_sync_config(self) -> Dict[str, Any]:
+        """Get sync configuration."""
+        return {
+            "backup_originals": self.get("sync.backup_originals", True),
+            "backup_folder": self.get("sync.backup_folder", "Backups"),
+            "max_file_size_mb": self.get("sync.max_file_size_mb", 50),
+            "retry_attempts": self.get("sync.retry_attempts", 3),
+        }
+
+    def get_ocr_config(self) -> Dict[str, Any]:
+        """Get OCR configuration."""
+        return self.get("processing.ocr", {
+            "language": "eng",
+            "confidence_threshold": 60,
+        })
 
     def get_imap_config(self) -> Dict[str, Any]:
         """Get IMAP configuration for email receiving."""
@@ -317,15 +339,27 @@ class Config:
 
     def get_ocr_config(self) -> Dict[str, Any]:
         """Get OCR configuration."""
-        return self.get("processing.ocr", {})
+        return self.get("processing.ocr", {
+            "language": "eng",
+            "confidence_threshold": 60,
+        })
 
     def get_pdf_config(self) -> Dict[str, Any]:
         """Get PDF generation configuration."""
-        return self.get("processing.pdf", {})
+        return self.get("processing.pdf", {
+            "page_size": "A4",
+            "margins": [72, 72, 72, 72],
+            "font_family": "Times-Roman",
+            "font_size": 12,
+            "line_spacing": 1.2,
+        })
 
     def get_markdown_config(self) -> Dict[str, Any]:
         """Get Markdown processing configuration."""
-        return self.get("processing.markdown", {})
+        return self.get("processing.markdown", {
+            "extensions": ["tables", "fenced_code", "toc"],
+            "preserve_links": True,
+        })
 
     def get_sync_config(self) -> Dict[str, Any]:
         """Get sync configuration."""

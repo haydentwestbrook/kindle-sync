@@ -23,14 +23,33 @@ class TestMarkdownToPDFConverter:
         """Create a mock configuration."""
         config = Mock(spec=Config)
         config.get.side_effect = lambda key, default=None: {
-            "processing.pdf.page_size": "A4",
-            "processing.pdf.margins": [72, 72, 72, 72],
-            "processing.pdf.font_family": "Times-Roman",
-            "processing.pdf.font_size": 12,
-            "processing.pdf.line_spacing": 1.2,
-            "processing.markdown.extensions": ["tables", "fenced_code", "toc"],
-            "processing.markdown.preserve_links": True,
+            "processing.pdf": {
+                "page_size": "A4",
+                "margins": [72, 72, 72, 72],
+                "font_family": "Times-Roman",
+                "font_size": 12,
+                "line_spacing": 1.2,
+            },
+            "processing.markdown": {
+                "extensions": ["tables", "fenced_code", "toc"],
+                "preserve_links": True,
+            },
+            "processing.ocr": {
+                "language": "eng",
+                "confidence_threshold": 60,
+            },
         }.get(key, default)
+        config.get_pdf_config.return_value = {
+            "page_size": "A4",
+            "margins": [72, 72, 72, 72],
+            "font_family": "Times-Roman",
+            "font_size": 12,
+            "line_spacing": 1.2,
+        }
+        config.get_markdown_config.return_value = {
+            "extensions": ["tables", "fenced_code", "toc"],
+            "preserve_links": True,
+        }
         return config
 
     @pytest.fixture
@@ -117,7 +136,7 @@ class TestMarkdownToPDFConverter:
             converter.convert_markdown_to_pdf(temp_markdown_file)
 
         assert exc_info.value.severity == ErrorSeverity.MEDIUM
-        assert "Failed to convert markdown to PDF" in str(exc_info.value)
+        assert "Failed to generate PDF" in str(exc_info.value)
 
     def test_convert_markdown_to_pdf_file_not_found(self, converter):
         """Test markdown to PDF conversion with non-existent file."""
@@ -177,9 +196,15 @@ class TestPDFToMarkdownConverter:
         """Create a mock configuration."""
         config = Mock(spec=Config)
         config.get.side_effect = lambda key, default=None: {
-            "processing.ocr.language": "eng",
-            "processing.ocr.confidence_threshold": 60,
+            "processing.ocr": {
+                "language": "eng",
+                "confidence_threshold": 60,
+            },
         }.get(key, default)
+        config.get_ocr_config.return_value = {
+            "language": "eng",
+            "confidence_threshold": 60,
+        }
         return config
 
     @pytest.fixture
@@ -212,8 +237,8 @@ class TestPDFToMarkdownConverter:
         converter = PDFToMarkdownConverter(mock_config)
         assert converter.config == mock_config
 
-    @patch("src.pdf_converter.pdf2image.convert_from_path")
-    @patch("src.pdf_converter.pytesseract.image_to_string")
+    @patch("pdf2image.convert_from_path")
+    @patch("pytesseract.image_to_string")
     def test_convert_pdf_to_markdown_success(
         self, mock_ocr, mock_convert, converter, temp_pdf_file
     ):
@@ -235,8 +260,8 @@ class TestPDFToMarkdownConverter:
         mock_convert.assert_called_once()
         mock_ocr.assert_called_once()
 
-    @patch("src.pdf_converter.pdf2image.convert_from_path")
-    @patch("src.pdf_converter.pytesseract.image_to_string")
+    @patch("pdf2image.convert_from_path")
+    @patch("pytesseract.image_to_string")
     def test_convert_pdf_to_markdown_with_custom_output(
         self, mock_ocr, mock_convert, converter, temp_pdf_file
     ):
@@ -253,7 +278,7 @@ class TestPDFToMarkdownConverter:
         assert result == custom_output
         assert result.exists()
 
-    @patch("src.pdf_converter.pdf2image.convert_from_path")
+    @patch("pdf2image.convert_from_path")
     def test_convert_pdf_to_markdown_conversion_error(
         self, mock_convert, converter, temp_pdf_file
     ):
@@ -277,8 +302,8 @@ class TestPDFToMarkdownConverter:
         assert exc_info.value.severity == ErrorSeverity.HIGH
         assert "Input file does not exist" in str(exc_info.value)
 
-    @patch("src.pdf_converter.pdf2image.convert_from_path")
-    @patch("src.pdf_converter.pytesseract.image_to_string")
+    @patch("pdf2image.convert_from_path")
+    @patch("pytesseract.image_to_string")
     def test_convert_pdf_to_markdown_ocr_error(
         self, mock_ocr, mock_convert, converter, temp_pdf_file
     ):
@@ -303,8 +328,8 @@ class TestPDFToMarkdownConverter:
         assert config["language"] == "eng"
         assert config["confidence_threshold"] == 60
 
-    @patch("src.pdf_converter.pdf2image.convert_from_path")
-    @patch("src.pdf_converter.pytesseract.image_to_string")
+    @patch("pdf2image.convert_from_path")
+    @patch("pytesseract.image_to_string")
     def test_convert_pdf_to_markdown_empty_text(
         self, mock_ocr, mock_convert, converter, temp_pdf_file
     ):

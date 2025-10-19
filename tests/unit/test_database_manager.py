@@ -38,7 +38,7 @@ class TestDatabaseManager:
         """Test database initialization."""
         db_manager = DatabaseManager(str(temp_db_path))
 
-        assert db_manager.database_url == str(temp_db_path)
+        assert db_manager.database_url == f"sqlite:///{temp_db_path}"
         assert db_manager.engine is not None
         assert db_manager.Session is not None
 

@@ -160,6 +160,9 @@ class KindleSync:
                 )
 
             backup_folder = Path(self.sync_config.get("backup_folder", "Backups"))
+            # Ensure backup_folder is a directory, not a file
+            if backup_folder.exists() and not backup_folder.is_dir():
+                backup_folder.unlink()  # Remove if it's a file
             backup_folder.mkdir(parents=True, exist_ok=True)
 
             # Create backup with timestamp

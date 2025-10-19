@@ -91,6 +91,12 @@ class HealthChecker:
         # Disk space check
         self.register_check("disk_space", self._check_disk_space)
 
+        # Additional checks expected by tests
+        self.register_check("config_paths", self._check_config_paths)
+        self.register_check("database_connection", self._check_database_connection)
+        self.register_check("email_service_config", self._check_email_service_config)
+        self.register_check("temp_directory_access", self._check_temp_directory_access)
+
     async def run_check(self, name: str) -> HealthCheckResult:
         """
         Run a specific health check.
@@ -187,12 +193,12 @@ class HealthChecker:
 
             return result
 
-    async def run_all_checks(self) -> Dict[str, HealthCheckResult]:
+    async def run_all_checks(self) -> Dict[str, Any]:
         """
         Run all registered health checks.
 
         Returns:
-            Dictionary mapping check names to results
+            Dictionary with overall status and individual check results
         """
         results = {}
 
@@ -213,7 +219,21 @@ class HealthChecker:
                     error_message=f"Check failed: {e}",
                 )
 
-        return results
+        # Determine overall status
+        overall_status = self.get_overall_status(results)
+        
+        return {
+            "overall_status": overall_status.value,
+            "checks": {
+                name: {
+                    "status": result.status.value,
+                    "message": result.error_message or f"{result.status.value}",
+                    "response_time_ms": result.response_time_ms,
+                    "metadata": result.metadata
+                }
+                for name, result in results.items()
+            }
+        }
 
     def get_overall_status(self, results: Dict[str, HealthCheckResult]) -> HealthStatus:
         """
@@ -426,3 +446,103 @@ class HealthChecker:
             return HealthCheckResult(
                 name="disk_space", status=HealthStatus.UNHEALTHY, error_message=str(e)
             )
+
+    # Additional health check methods expected by tests
+
+    def _check_config_paths(self) -> tuple[str, str]:
+        """Check configuration paths accessibility."""
+        try:
+            # Get vault path
+            vault_path = self.config.get_obsidian_vault_path()
+            if not vault_path.exists():
+                return ("unhealthy", f"Vault path does not exist: {vault_path}")
+            
+            if not vault_path.is_dir():
+                return ("unhealthy", f"Vault path is not a directory: {vault_path}")
+            
+            # Check sync folder
+            sync_folder = self.config.get_sync_folder_path()
+            if not sync_folder.exists():
+                try:
+                    sync_folder.mkdir(parents=True, exist_ok=True)
+                except Exception as e:
+                    return ("unhealthy", f"Sync folder not accessible: {e}")
+            
+            # Check backup folder
+            backup_folder = self.config.get_backup_folder_path()
+            if not backup_folder.exists():
+                try:
+                    backup_folder.mkdir(parents=True, exist_ok=True)
+                except Exception as e:
+                    return ("unhealthy", f"Backup folder not creatable: {e}")
+            
+            # Test write access to vault
+            test_file = vault_path / ".health_check_test"
+            try:
+                test_file.write_text("test")
+                test_file.unlink()
+            except Exception as e:
+                return ("unhealthy", f"Vault not readable/writable: {e}")
+            
+            return ("healthy", "All configured paths are accessible")
+            
+        except Exception as e:
+            return ("unhealthy", f"Error checking config paths: {e}")
+
+    def _check_database_connection(self) -> tuple[str, str]:
+        """Check database connection."""
+        try:
+            if not self.db_manager:
+                return ("unhealthy", "Database manager not available")
+            
+            # Test database connection
+            with self.db_manager.get_session() as session:
+                # Simple query to test connection
+                session.execute("SELECT 1")
+            
+            return ("healthy", "Database connection successful")
+            
+        except Exception as e:
+            return ("unhealthy", f"Database connection failed: {e}")
+
+    def _check_email_service_config(self) -> tuple[str, str]:
+        """Check email service configuration."""
+        try:
+            # Get SMTP configuration
+            smtp_config = self.config.get_smtp_config()
+            if not smtp_config.get("server") or not smtp_config.get("username") or not smtp_config.get("password"):
+                return ("unhealthy", "Incomplete SMTP configuration")
+            
+            # Get Kindle email
+            kindle_email = self.config.get_kindle_email()
+            if not kindle_email:
+                return ("unhealthy", "Kindle email address not configured")
+            
+            return ("healthy", "Email service configuration is complete")
+            
+        except Exception as e:
+            return ("unhealthy", f"Error checking email config: {e}")
+
+    def _check_temp_directory_access(self) -> tuple[str, str]:
+        """Check temporary directory access."""
+        try:
+            import tempfile
+            import os
+            
+            # Test temp directory access
+            temp_dir = Path(tempfile.gettempdir())
+            if not temp_dir.exists():
+                return ("unhealthy", "Temporary directory not accessible or writable")
+            
+            # Test write access
+            test_file = temp_dir / "kindle_sync_health_test"
+            try:
+                test_file.write_text("test")
+                test_file.unlink()
+            except Exception as e:
+                return ("unhealthy", f"Error accessing temporary directory: {e}")
+            
+            return ("healthy", "Temporary directory is accessible")
+            
+        except Exception as e:
+            return ("unhealthy", f"Error accessing temporary directory: {e}")

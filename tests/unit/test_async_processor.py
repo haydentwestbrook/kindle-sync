@@ -41,22 +41,21 @@ class TestAsyncSyncProcessor:
     def mock_db_manager(self):
         """Create a mock database manager."""
         db_manager = Mock(spec=DatabaseManager)
-        db_manager.get_processed_file_by_hash.return_value = None
-        db_manager.add_processed_file.return_value = Mock(id=1)
-        db_manager.add_file_operation.return_value = Mock(id=1)
+        db_manager.get_file_processing_history.return_value = None
+        db_manager.record_file_operation.return_value = Mock(id=1)
+        db_manager.record_file_processing.return_value = Mock(id=1)
+        db_manager.add_to_queue.return_value = Mock(id=1)
+        db_manager.get_queue_size.return_value = 0
+        db_manager.get_next_queue_item.return_value = None
+        db_manager.remove_from_queue.return_value = None
+        db_manager.get_processing_statistics.return_value = {}
         return db_manager
 
     @pytest.fixture
     def processor(self, mock_config, mock_db_manager):
         """Create an AsyncSyncProcessor instance."""
-        with patch("src.core.async_processor.KindleSync"), patch(
-            "src.core.async_processor.MarkdownToPDFConverter"
-        ), patch("src.core.async_processor.PDFToMarkdownConverter"), patch(
-            "src.core.async_processor.FileValidator"
-        ), patch(
-            "src.core.async_processor.ErrorHandler"
-        ):
-            return AsyncSyncProcessor(mock_config, mock_db_manager, max_workers=2)
+        with patch("src.core.async_processor.DatabaseManager", return_value=mock_db_manager):
+            return AsyncSyncProcessor(mock_config, max_workers=2)
 
     @pytest.mark.asyncio
     async def test_process_file_async_success(self, processor, mock_db_manager):
