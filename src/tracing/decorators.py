@@ -80,7 +80,7 @@ def trace_async_function(
 
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
-        async def wrapper(*args, **kwargs):
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
             tracer = trace.get_tracer(__name__)
             span_name = operation_name or f"{func.__module__}.{func.__name__}"
 

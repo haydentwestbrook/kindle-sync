@@ -9,7 +9,7 @@ asynchronous file processing.
 import asyncio
 import signal
 import sys
-from typing import Optional
+from typing import Any, Optional
 
 from loguru import logger
 from pathlib import Path
@@ -67,9 +67,7 @@ class AsyncKindleSyncApp:
 
             # Initialize async processor
             max_workers = self.config.get("advanced.async_workers", 3)
-            self.processor = AsyncSyncProcessor(
-                self.config, self.db_manager, max_workers
-            )
+            self.processor = AsyncSyncProcessor(self.config, max_workers)
             logger.info("Async processor initialized.")
 
             # Initialize async file watcher
@@ -95,27 +93,30 @@ class AsyncKindleSyncApp:
                 self.error_handler.handle_error(error, {"component": "initialization"})
             raise error
 
-    async def start(self):
+    async def start(self) -> None:
         """Start the async application."""
         try:
             logger.info("Starting AsyncKindleSyncApp...")
             self.running = True
 
             # Run initial health check
-            health_results = self.health_checker.run_all_checks()
-            if health_results["overall_status"] != "healthy":
-                logger.warning(f"Health check failed: {health_results}")
-                # Continue anyway, but log the issues
+            if self.health_checker:
+                health_results = await self.health_checker.run_all_checks()
+                if health_results["overall_status"] != "healthy":
+                    logger.warning(f"Health check failed: {health_results}")
+                    # Continue anyway, but log the issues
 
             # Start Prometheus exporter
-            exporter_host = self.config.get("monitoring.exporter_host", "0.0.0.0")
-            exporter_port = self.config.get("monitoring.exporter_port", 8080)
-            self.prometheus_runner = await self.prometheus_exporter.start_server(
-                exporter_host, exporter_port
-            )
+            if self.prometheus_exporter:
+                exporter_host = self.config.get("monitoring.exporter_host", "0.0.0.0")
+                exporter_port = self.config.get("monitoring.exporter_port", 8080)
+                self.prometheus_runner = await self.prometheus_exporter.start_server(
+                    exporter_host, exporter_port
+                )
 
             # Start file watcher (this will start the async processing workers)
-            await self.file_watcher.start()
+            if self.file_watcher:
+                await self.file_watcher.start()
 
         except Exception as e:
             error = KindleSyncError(
@@ -125,7 +126,7 @@ class AsyncKindleSyncApp:
                 self.error_handler.handle_error(error, {"component": "startup"})
             raise error
 
-    async def stop(self):
+    async def stop(self) -> None:
         """Stop the async application gracefully."""
         try:
             logger.info("Stopping AsyncKindleSyncApp...")
@@ -137,56 +138,60 @@ class AsyncKindleSyncApp:
                 logger.info("File watcher stopped.")
 
             # Stop Prometheus exporter
-            if self.prometheus_runner:
+            if self.prometheus_runner and self.prometheus_exporter:
                 await self.prometheus_exporter.stop_server(self.prometheus_runner)
                 logger.info("Prometheus exporter stopped.")
 
             # Shutdown processor
             if self.processor:
-                self.processor.shutdown()
+                await self.processor.cleanup()
                 logger.info("Processor shut down.")
 
             # Close database connection
             if self.db_manager:
-                self.db_manager.close()
+                self.db_manager.engine.dispose()
                 logger.info("Database connection closed.")
 
             logger.info("AsyncKindleSyncApp stopped successfully.")
         except Exception as e:
             logger.error(f"Error during shutdown: {e}")
 
-    async def run_health_check_loop(self):
+    async def run_health_check_loop(self) -> None:
         """Run periodic health checks."""
         while self.running:
             try:
                 await asyncio.sleep(60)  # Check every minute
-                if self.running:
-                    health_results = self.health_checker.run_all_checks()
+                if self.running and self.health_checker:
+                    health_results = await self.health_checker.run_all_checks()
                     if health_results["overall_status"] != "healthy":
                         logger.warning(f"Health check failed: {health_results}")
                         # Update metrics for health check failures
-                        self.metrics_updater.on_error("health_check_failure", "medium")
+                        if self.metrics_updater:
+                            self.metrics_updater.on_error(
+                                "health_check_failure", "medium"
+                            )
             except Exception as e:
                 logger.error(f"Error in health check loop: {e}")
-                self.metrics_updater.on_error("health_check_error", "high")
+                if self.metrics_updater:
+                    self.metrics_updater.on_error("health_check_error", "high")
 
-    async def run_metrics_update_loop(self):
+    async def run_metrics_update_loop(self) -> None:
         """Run periodic metrics updates."""
         while self.running:
             try:
                 await asyncio.sleep(30)  # Update every 30 seconds
-                if self.running and self.file_watcher:
+                if self.running and self.file_watcher and self.metrics_updater:
                     # Update queue and task metrics
                     queue_size = self.file_watcher.processing_queue.qsize()
-                    active_tasks = len(self.file_watcher.processing_tasks)
+                    active_tasks = len(self.file_watcher.workers)
                     self.metrics_updater.update_queue_metrics(queue_size, active_tasks)
             except Exception as e:
                 logger.error(f"Error in metrics update loop: {e}")
 
-    def setup_signal_handlers(self):
+    def setup_signal_handlers(self) -> None:
         """Set up signal handlers for graceful shutdown."""
 
-        def signal_handler(signum, frame):
+        def signal_handler(signum: int, frame: Any) -> None:
             logger.info(f"Received signal {signum}, initiating graceful shutdown...")
             asyncio.create_task(self.stop())
 
@@ -194,7 +199,7 @@ class AsyncKindleSyncApp:
         signal.signal(signal.SIGTERM, signal_handler)
         logger.info("Signal handlers set up.")
 
-    async def run(self):
+    async def run(self) -> None:
         """Main application run loop."""
         try:
             await self.initialize()

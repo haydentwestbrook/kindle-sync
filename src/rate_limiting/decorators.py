@@ -34,7 +34,7 @@ def rate_limit(
 
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
-        async def async_wrapper(*args, **kwargs):
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             limiter = get_limiter()
             if not limiter:
                 return await func(*args, **kwargs)

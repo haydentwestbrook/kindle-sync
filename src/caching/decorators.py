@@ -33,7 +33,7 @@ def cached(
 
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
-        async def async_wrapper(*args, **kwargs):
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             cache = get_cache()
             if not cache:
                 return await func(*args, **kwargs)
@@ -118,7 +118,7 @@ def cache_invalidate(
 
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
-        async def async_wrapper(*args, **kwargs):
+        async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
             # Execute function
             result = await func(*args, **kwargs)
 
