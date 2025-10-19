@@ -231,11 +231,12 @@ class TestHealthChecker:
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
 
-            # Create a file instead of directory to simulate permission issue
-            test_file = temp_path / "test_file"
-            test_file.touch()
+            # Create a directory but make it non-writable
+            vault_dir = temp_path / "vault"
+            vault_dir.mkdir()
+            vault_dir.chmod(0o444)  # Read-only
 
-            mock_config.get_obsidian_vault_path.return_value = test_file
+            mock_config.get_obsidian_vault_path.return_value = vault_dir
             mock_config.get_sync_folder_path.return_value = temp_path / "sync"
             mock_config.get_backup_folder_path.return_value = temp_path / "backup"
 

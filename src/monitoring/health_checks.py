@@ -21,6 +21,7 @@ class HealthStatus(str, Enum):
     UNHEALTHY = "unhealthy"
     DEGRADED = "degraded"
     UNKNOWN = "unknown"
+    ERROR = "error"
 
 
 @dataclass
@@ -194,7 +195,7 @@ class HealthChecker:
             response_time = int((time.time() - start_time) * 1000)
             result = HealthCheckResult(
                 name=name,
-                status=HealthStatus.UNHEALTHY,
+                status=HealthStatus.ERROR,
                 response_time_ms=response_time,
                 error_message=str(e),
             )
@@ -275,7 +276,9 @@ class HealthChecker:
 
         statuses = [result.status for result in results.values()]
 
-        if HealthStatus.UNHEALTHY in statuses:
+        if HealthStatus.ERROR in statuses:
+            return HealthStatus.UNHEALTHY  # Error status makes overall status unhealthy
+        elif HealthStatus.UNHEALTHY in statuses:
             return HealthStatus.UNHEALTHY
         elif HealthStatus.DEGRADED in statuses:
             return HealthStatus.DEGRADED
@@ -494,11 +497,14 @@ class HealthChecker:
         
         # Check backup folder
         backup_folder = self.config.get_backup_folder_path()
-        if not backup_folder.exists():
-            try:
-                backup_folder.mkdir(parents=True, exist_ok=True)
-            except Exception as e:
-                return ("unhealthy", f"Backup folder not creatable: {e}")
+        try:
+            if not backup_folder.exists():
+                try:
+                    backup_folder.mkdir(parents=True, exist_ok=True)
+                except Exception as e:
+                    return ("unhealthy", f"Backup folder not creatable: {e}")
+        except PermissionError as e:
+            return ("unhealthy", f"Backup folder not creatable: {e}")
         
         # Test write access to vault
         test_file = vault_path / ".health_check_test"
@@ -553,6 +559,13 @@ class HealthChecker:
         temp_dir = Path(tempfile.gettempdir())
         if not temp_dir.exists():
             return ("unhealthy", "Temporary directory not accessible or writable")
+        
+        # Check write access using os.access
+        try:
+            if not os.access(str(temp_dir), os.W_OK):
+                return ("unhealthy", "Temporary directory not accessible or writable")
+        except OSError as e:
+            return ("unhealthy", f"Error accessing temporary directory: {e}")
         
         # Test write access
         test_file = temp_dir / "kindle_sync_health_test"

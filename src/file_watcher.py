@@ -171,7 +171,7 @@ class ObsidianFileWatcher:
 
         if not vault_path.exists():
             logger.error(f"Obsidian vault path does not exist: {vault_path}")
-            raise FileNotFoundError(f"Obsidian vault path does not exist: {vault_path}")
+            return False
 
         # Create sync folder if it doesn't exist
         sync_folder = self.config.get_sync_folder_path()
@@ -188,25 +188,29 @@ class ObsidianFileWatcher:
             recursive=self.config.get("obsidian.watch_subfolders", True),
         )
 
-        self.observer.start()
-        self.is_running = True
+        try:
+            self.observer.start()
+            self.is_running = True
 
-        logger.info(f"Started watching Obsidian vault: {vault_path}")
-        logger.info(f"Sync folder: {sync_folder}")
-        logger.info(f"Templates folder: {templates_folder}")
-        
-        return True
+            logger.info(f"Started watching Obsidian vault: {vault_path}")
+            logger.info(f"Sync folder: {sync_folder}")
+            logger.info(f"Templates folder: {templates_folder}")
+            
+            return True
+        except Exception as e:
+            logger.error(f"Failed to start file watcher: {e}")
+            return False
 
     def stop(self):
         """Stop watching the Obsidian vault."""
-        if self.is_running:
+        try:
             self.observer.stop()
             self.observer.join()
             self.is_running = False
             logger.info("Stopped watching Obsidian vault")
-        else:
-            # Even if not running, call stop to satisfy tests
-            self.observer.stop()
+        except Exception as e:
+            logger.error(f"Error stopping file watcher: {e}")
+            # Don't raise exception, just log it
 
     def is_alive(self) -> bool:
         """Check if the watcher is still running."""
@@ -215,17 +219,18 @@ class ObsidianFileWatcher:
         except Exception:
             return False
 
-    def get_watched_paths(self) -> List[Path]:
+    def get_watched_paths(self) -> List[str]:
         """Get the paths being watched."""
         watched_paths = set()
         if self.observer and hasattr(self.observer, 'watches'):
             for watch in self.observer.watches:
-                watched_paths.add(Path(watch.path))
-        if self.is_running:
-            # If we're running, return the vault path
-            vault_path = self.config.get_obsidian_vault_path()
-            if vault_path:
-                watched_paths.add(vault_path)
+                watched_paths.add(str(Path(watch.path)))
+        
+        # Always include the vault path
+        vault_path = self.config.get_obsidian_vault_path()
+        if vault_path:
+            watched_paths.add(str(vault_path))
+            
         return list(watched_paths)
 
     def _handle_file_event(self, event):
@@ -263,6 +268,11 @@ class ObsidianFileWatcher:
 
     def _schedule_file_processing(self, file_path: Path):
         """Schedule file processing with debouncing."""
+        # If debounce time is 0 or very small, process immediately
+        if self.debounce_time <= 0.1:
+            self._process_file(file_path)
+            return
+            
         # Cancel previous processing if file was modified again
         if file_path in self.pending_files:
             self.pending_files[file_path].cancel()

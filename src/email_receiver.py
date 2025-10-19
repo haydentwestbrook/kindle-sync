@@ -13,6 +13,7 @@ from loguru import logger
 from pathlib import Path
 
 from .config import Config
+from .core.exceptions import EmailServiceError, ErrorSeverity
 
 
 class EmailReceiver:
@@ -45,6 +46,7 @@ class EmailReceiver:
         self.stats = {
             "emails_checked": 0,
             "emails_processed": 0,
+            "pdfs_extracted": 0,
             "pdfs_downloaded": 0,
             "errors": 0
         }
@@ -149,25 +151,23 @@ class EmailReceiver:
     def connect_to_imap(self) -> Optional[imaplib.IMAP4_SSL]:
         """Connect to IMAP server."""
         try:
-            # Create SSL context
-            context = ssl.create_default_context()
-
             # Connect to IMAP server
             mail = imaplib.IMAP4_SSL(
                 self.imap_config["server"],
                 self.imap_config["port"],
-                ssl_context=context,
             )
 
             # Login
-            mail.login(self.imap_config["username"], self.imap_config["password"])
+            response = mail.login(self.imap_config["username"], self.imap_config["password"])
+            if response[0] != "OK":
+                raise EmailServiceError(f"Failed to login to IMAP server: {response[1]}")
 
             logger.info("Connected to IMAP server successfully")
             return mail
 
         except Exception as e:
             logger.error(f"Failed to connect to IMAP server: {e}")
-            return None
+            raise EmailServiceError(f"Failed to connect to IMAP server: {e}") from e
 
     def check_for_new_emails(self) -> List[Path]:
         """Check for new emails with PDF attachments from approved senders."""
@@ -456,7 +456,7 @@ class EmailReceiver:
 
         except Exception as e:
             logger.error(f"Error saving PDF attachment: {e}")
-            return None
+            raise EmailServiceError(f"Failed to save PDF attachment: {e}", severity=ErrorSeverity.MEDIUM) from e
 
     def _extract_download_links(self, email_message) -> List[str]:
         """Extract download links from email body."""
@@ -660,35 +660,38 @@ class EmailReceiver:
             logger.error(f"Error extracting PDF attachments: {e}")
         return attachments
 
-    def _save_pdf_attachment(self, attachment, filename, email_id):
+    def _save_pdf_attachment(self, attachment):
         """Save PDF attachment to sync folder."""
         try:
-            # Generate unique filename with timestamp
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            email_id_str = (
-                email_id.decode() if isinstance(email_id, bytes) else str(email_id)
-            )
-            base_name = Path(filename).stem
-            extension = Path(filename).suffix
-
-            # Create unique filename
-            unique_filename = f"{base_name}_{timestamp}_{email_id_str}{extension}"
-
+            filename = attachment["filename"]
+            content = attachment["content"]
+            
+            # Get sync folder path
+            sync_folder_path = self.config.get_sync_folder_path()
+            
             # Ensure sync folder exists
-            self.sync_folder_path.mkdir(parents=True, exist_ok=True)
+            sync_folder_path.mkdir(parents=True, exist_ok=True)
 
-            # Save file
-            pdf_path = self.sync_folder_path / unique_filename
+            # Try to save with original filename first
+            pdf_path = sync_folder_path / filename
+            
+            # If file exists, add timestamp to make it unique
+            if pdf_path.exists():
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                base_name = Path(filename).stem
+                extension = Path(filename).suffix
+                unique_filename = f"{base_name}_{timestamp}{extension}"
+                pdf_path = sync_folder_path / unique_filename
 
             with open(pdf_path, "wb") as f:
-                f.write(attachment["content"])
+                f.write(content)
 
             logger.info(f"Saved PDF attachment: {pdf_path}")
             return pdf_path
 
         except Exception as e:
             logger.error(f"Error saving PDF attachment: {e}")
-            return None
+            raise EmailServiceError(f"Failed to save PDF attachment: {e}", severity=ErrorSeverity.MEDIUM) from e
 
     def _mark_email_as_read(self, imap, email_id):
         """Mark email as read."""
@@ -717,7 +720,15 @@ class EmailReceiver:
 
     def _record_processed_email(self, email_id):
         """Record email as processed."""
-        self._save_processed_email(email_id)
+        try:
+            tracking_file_path = self.config.get("email_receiving.duplicate_tracking_file")
+            if tracking_file_path:
+                tracking_file = Path(tracking_file_path)
+                tracking_file.parent.mkdir(parents=True, exist_ok=True)
+                with open(tracking_file, "a") as f:
+                    f.write(f"{email_id}\n")
+        except Exception as e:
+            logger.error(f"Error recording processed email: {e}")
 
     def get_statistics(self):
         """Get email receiver statistics."""
@@ -728,6 +739,7 @@ class EmailReceiver:
         self.stats = {
             "emails_checked": 0,
             "emails_processed": 0,
+            "pdfs_extracted": 0,
             "pdfs_downloaded": 0,
             "errors": 0
         }

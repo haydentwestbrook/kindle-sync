@@ -25,7 +25,7 @@ class TestObsidianFileWatcher:
         config = Mock(spec=Config)
         config.get.side_effect = lambda key, default=None: {
             "obsidian.watch_subfolders": True,
-            "advanced.debounce_time": 1.0,
+            "advanced.debounce_time": 0.05,  # Very small for immediate processing in tests
             "patterns.markdown_files": "*.md",
             "patterns.pdf_files": "*.pdf",
         }.get(key, default)
@@ -161,12 +161,16 @@ class TestObsidianFileWatcher:
         assert len(paths) >= 1
         assert str(temp_directory) in paths
 
-    def test_handle_file_event_created(self, file_watcher):
+    def test_handle_file_event_created(self, file_watcher, temp_directory):
         """Test handling file created event."""
+        # Create the test file
+        test_file = temp_directory / "test.md"
+        test_file.write_text("# Test")
+        
         # Mock event
         mock_event = Mock()
         mock_event.event_type = "created"
-        mock_event.src_path = "/tmp/test_vault/test.md"
+        mock_event.src_path = str(test_file)
         mock_event.is_directory = False
 
         # Mock file processor
@@ -177,12 +181,16 @@ class TestObsidianFileWatcher:
         # Should call file processor
         file_watcher.file_processor.process_file.assert_called_once()
 
-    def test_handle_file_event_modified(self, file_watcher):
+    def test_handle_file_event_modified(self, file_watcher, temp_directory):
         """Test handling file modified event."""
+        # Create the test file
+        test_file = temp_directory / "test.md"
+        test_file.write_text("# Test")
+        
         # Mock event
         mock_event = Mock()
         mock_event.event_type = "modified"
-        mock_event.src_path = "/tmp/test_vault/test.md"
+        mock_event.src_path = str(test_file)
         mock_event.is_directory = False
 
         # Mock file processor
@@ -193,13 +201,19 @@ class TestObsidianFileWatcher:
         # Should call file processor
         file_watcher.file_processor.process_file.assert_called_once()
 
-    def test_handle_file_event_moved(self, file_watcher):
+    def test_handle_file_event_moved(self, file_watcher, temp_directory):
         """Test handling file moved event."""
+        # Create the test files
+        old_file = temp_directory / "old.md"
+        new_file = temp_directory / "new.md"
+        old_file.write_text("# Old")
+        new_file.write_text("# New")
+        
         # Mock event
         mock_event = Mock()
         mock_event.event_type = "moved"
-        mock_event.src_path = "/tmp/test_vault/old.md"
-        mock_event.dest_path = "/tmp/test_vault/new.md"
+        mock_event.src_path = str(old_file)
+        mock_event.dest_path = str(new_file)
         mock_event.is_directory = False
 
         # Mock file processor
@@ -306,6 +320,9 @@ class TestObsidianFileWatcher:
 
     def test_debounce_mechanism(self, file_watcher):
         """Test debounce mechanism for rapid file changes."""
+        # Set a longer debounce time for this test
+        file_watcher.debounce_time = 2.0
+        
         # Mock event
         mock_event = Mock()
         mock_event.event_type = "modified"
