@@ -169,6 +169,13 @@ class TestConfig:
         config_data = {
             "obsidian": {"vault_path": "~/test_vault"},
             "sync": {"backup_folder": "~/backups"},
+            "kindle": {"email": "test@kindle.com"},
+            "smtp": {
+                "host": "smtp.gmail.com",
+                "port": 587,
+                "username": "test@gmail.com",
+                "password": "test_password"
+            }
         }
 
         config_file = temp_dir / "test_config.yaml"
@@ -178,7 +185,11 @@ class TestConfig:
         with patch("pathlib.Path.expanduser") as mock_expand, patch(
             "src.config.SecretsManager"
         ) as mock_secrets_class:
-            mock_expand.return_value = Path("/home/user/test_vault")
+            # Create the test directory
+            test_vault_path = temp_dir / "test_vault"
+            test_vault_path.mkdir()
+            
+            mock_expand.return_value = test_vault_path
             mock_secrets_instance = mock_secrets_class.return_value
             mock_secrets_instance.get_secret.return_value = None
 

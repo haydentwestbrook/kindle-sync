@@ -42,6 +42,16 @@ class ObsidianConfig(BaseModel):
 
     @validator("vault_path")
     def validate_vault_path(cls, v):
+        # Allow empty strings for default values
+        if not v:
+            return v
+            
+        # Expand user path if it contains ~
+        if isinstance(v, str) and "~" in v:
+            v = Path(v).expanduser()
+        elif isinstance(v, Path):
+            v = v.expanduser()
+        
         if not v.exists():
             raise ValueError(f"Obsidian vault path does not exist: {v}")
         if not v.is_dir():
@@ -62,6 +72,10 @@ class KindleConfig(BaseModel):
     def validate_email(cls, v):
         import re
 
+        # Allow empty strings for default values
+        if not v:
+            return v
+            
         email_pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
         if not re.match(email_pattern, v):
             raise ValueError(f"Invalid email format: {v}")
@@ -184,11 +198,43 @@ class Config:
                     Path(backup_folder).expanduser().resolve()
                 )
 
+    def _add_default_values(self):
+        """Add default values for missing required fields."""
+        # Add default obsidian config if missing
+        if "obsidian" not in self._raw_config:
+            self._raw_config["obsidian"] = {
+                "vault_path": "",
+                "sync_folder": "Kindle Sync",
+                "templates_folder": "Templates",
+                "watch_subfolders": True
+            }
+        
+        # Add default kindle config if missing
+        if "kindle" not in self._raw_config:
+            self._raw_config["kindle"] = {
+                "email": "",
+                "approved_senders": [],
+                "usb_path": None
+            }
+        
+        # Add default smtp config if missing
+        if "smtp" not in self._raw_config:
+            self._raw_config["smtp"] = {
+                "host": "",
+                "port": 587,
+                "username": "",
+                "password": "",
+                "use_tls": True
+            }
+
     def _validate_and_parse_config(self) -> KindleSyncConfig:
         """Validate and parse configuration using Pydantic models."""
         try:
             # Handle environment variable overrides
             self._apply_env_overrides()
+            
+            # Add default values for missing required fields
+            self._add_default_values()
 
             # Parse with Pydantic
             config = KindleSyncConfig(**self._raw_config)
@@ -257,7 +303,10 @@ class Config:
 
     def get_obsidian_vault_path(self) -> Path:
         """Get the Obsidian vault path."""
-        return Path(self.get("obsidian.vault_path", ""))
+        path_str = self.get("obsidian.vault_path", "")
+        if path_str:
+            return Path(path_str).expanduser()
+        return Path("")
 
     def get_sync_folder_path(self) -> Path:
         """Get the sync folder path within the vault."""
@@ -273,7 +322,8 @@ class Config:
 
     def get_backup_folder_path(self) -> Path:
         """Get the backup folder path."""
-        return Path(self.get("sync.backup_folder", "Backups"))
+        path_str = self.get("sync.backup_folder", "Backups")
+        return Path(path_str).expanduser()
 
     def get_kindle_email(self) -> str:
         """Get the Kindle email address."""

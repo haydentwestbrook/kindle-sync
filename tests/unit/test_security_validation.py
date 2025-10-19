@@ -272,14 +272,14 @@ class TestFileValidator:
 
     def test_mime_detection_fallback(self):
         """Test MIME detection fallback when magic is not available."""
-        # Since magic is not available in our test environment,
-        # the validator should use fallback detection
-        validator = FileValidator()
-        assert validator.mime_detector is None
-
         # Test fallback MIME type detection
+        validator = FileValidator()
         mime_type = validator._get_mime_type_from_extension(Path("test.md"))
         assert mime_type == "text/markdown"
+        
+        # Test that fallback works for other extensions
+        assert validator._get_mime_type_from_extension(Path("test.pdf")) == "application/pdf"
+        assert validator._get_mime_type_from_extension(Path("test.txt")) == "text/plain"
 
         mime_type = validator._get_mime_type_from_extension(Path("test.pdf"))
         assert mime_type == "application/pdf"

@@ -235,6 +235,15 @@ class HealthChecker:
             }
         }
 
+    def run_all_checks_sync(self) -> Dict[str, Any]:
+        """
+        Synchronous version of run_all_checks for testing.
+        
+        Returns:
+            Dictionary with overall status and individual check results
+        """
+        return asyncio.run(self.run_all_checks())
+
     def get_overall_status(self, results: Dict[str, HealthCheckResult]) -> HealthStatus:
         """
         Determine overall system health status.

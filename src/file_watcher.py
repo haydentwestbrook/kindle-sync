@@ -1,7 +1,7 @@
 """File watcher for monitoring Obsidian vault changes."""
 
 import time
-from typing import Callable, Set
+from typing import Callable, List, Set
 
 from loguru import logger
 from pathlib import Path
@@ -150,6 +150,14 @@ class ObsidianFileWatcher:
         self.observer = Observer()
         self.handler = ObsidianFileHandler(config, callback)
         self.is_running = False
+        self.file_processor = None
+        self.stats = {
+            "events_processed": 0,
+            "files_created": 0,
+            "files_modified": 0,
+            "files_moved": 0,
+            "errors": 0
+        }
 
         logger.info("Obsidian file watcher initialized")
 
@@ -194,3 +202,61 @@ class ObsidianFileWatcher:
     def is_alive(self) -> bool:
         """Check if the watcher is still running."""
         return self.observer.is_alive() if self.observer else False
+
+    def get_watched_paths(self) -> List[Path]:
+        """Get the paths being watched."""
+        watched_paths = set()
+        if self.observer and hasattr(self.observer, 'watches'):
+            for watch in self.observer.watches:
+                watched_paths.add(Path(watch.path))
+        elif self.is_running:
+            # If we're running but no watches, return the vault path
+            vault_path = self.config.get_obsidian_vault_path()
+            if vault_path:
+                watched_paths.add(vault_path)
+        return list(watched_paths)
+
+    def _handle_file_event(self, event):
+        """Handle file system events."""
+        try:
+            self.stats["events_processed"] += 1
+            
+            if event.event_type == "created":
+                self.stats["files_created"] += 1
+            elif event.event_type == "modified":
+                self.stats["files_modified"] += 1
+            elif event.event_type == "moved":
+                self.stats["files_moved"] += 1
+            
+            if self.file_processor:
+                file_path = Path(event.src_path)
+                if self._is_supported_file_type(file_path.name):
+                    self.file_processor.process_file(file_path)
+                    
+        except Exception as e:
+            self.stats["errors"] += 1
+            logger.error(f"Error handling file event: {e}")
+
+    def _is_supported_file_type(self, filename: str) -> bool:
+        """Check if file type is supported."""
+        filename_lower = filename.lower()
+        return (filename_lower.endswith('.md') or 
+                filename_lower.endswith('.pdf'))
+
+    def set_file_processor(self, processor):
+        """Set the file processor."""
+        self.file_processor = processor
+
+    def get_statistics(self) -> dict:
+        """Get file watcher statistics."""
+        return self.stats.copy()
+
+    def reset_statistics(self):
+        """Reset file watcher statistics."""
+        self.stats = {
+            "events_processed": 0,
+            "files_created": 0,
+            "files_modified": 0,
+            "files_moved": 0,
+            "errors": 0
+        }

@@ -211,7 +211,7 @@ class TestKindleSync:
 
         # Create backup folder
         backup_folder = temp_dir / "Backups"
-        backup_folder.mkdir()
+        backup_folder.mkdir(exist_ok=True)
 
         with patch.object(
             kindle_sync.config,

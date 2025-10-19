@@ -47,10 +47,31 @@ class TestHealthChecker:
         assert health_checker.config == mock_config
         assert health_checker.db_manager == mock_db_manager
 
-    def test_run_all_checks_success(self, health_checker, mock_config, mock_db_manager):
+    @pytest.mark.asyncio
+    async def test_run_all_checks_success(self, health_checker, mock_config, mock_db_manager):
         """Test running all health checks successfully."""
         # Mock all check methods to return healthy status
         with patch.object(
+            health_checker,
+            "_check_filesystem",
+            return_value=("healthy", "Filesystem accessible"),
+        ), patch.object(
+            health_checker,
+            "_check_configuration",
+            return_value=("healthy", "Configuration valid"),
+        ), patch.object(
+            health_checker,
+            "_check_database",
+            return_value=("healthy", "Database connected"),
+        ), patch.object(
+            health_checker,
+            "_check_memory",
+            return_value=("healthy", "Memory usage normal"),
+        ), patch.object(
+            health_checker,
+            "_check_disk_space",
+            return_value=("healthy", "Disk space available"),
+        ), patch.object(
             health_checker,
             "_check_config_paths",
             return_value=("healthy", "All paths accessible"),
@@ -67,21 +88,42 @@ class TestHealthChecker:
             "_check_temp_directory_access",
             return_value=("healthy", "Temp directory accessible"),
         ):
-            results = health_checker.run_all_checks()
+            results = await health_checker.run_all_checks()
 
             assert results["overall_status"] == "healthy"
-            assert len(results["checks"]) == 4
+            assert len(results["checks"]) == 9
 
             for check_name, check_result in results["checks"].items():
                 assert check_result["status"] == "healthy"
                 assert "message" in check_result
 
-    def test_run_all_checks_with_failures(
+    @pytest.mark.asyncio
+    async def test_run_all_checks_with_failures(
         self, health_checker, mock_config, mock_db_manager
     ):
         """Test running all health checks with some failures."""
         # Mock some checks to fail
         with patch.object(
+            health_checker,
+            "_check_filesystem",
+            return_value=("healthy", "Filesystem accessible"),
+        ), patch.object(
+            health_checker,
+            "_check_configuration",
+            return_value=("healthy", "Configuration valid"),
+        ), patch.object(
+            health_checker,
+            "_check_database",
+            return_value=("healthy", "Database connected"),
+        ), patch.object(
+            health_checker,
+            "_check_memory",
+            return_value=("healthy", "Memory usage normal"),
+        ), patch.object(
+            health_checker,
+            "_check_disk_space",
+            return_value=("healthy", "Disk space available"),
+        ), patch.object(
             health_checker,
             "_check_config_paths",
             return_value=("unhealthy", "Paths not accessible"),
@@ -98,7 +140,7 @@ class TestHealthChecker:
             "_check_temp_directory_access",
             return_value=("healthy", "Temp directory accessible"),
         ):
-            results = health_checker.run_all_checks()
+            results = await health_checker.run_all_checks()
 
             assert results["overall_status"] == "unhealthy"
             assert results["checks"]["config_paths"]["status"] == "unhealthy"
@@ -106,12 +148,33 @@ class TestHealthChecker:
             assert results["checks"]["email_service_config"]["status"] == "unhealthy"
             assert results["checks"]["temp_directory_access"]["status"] == "healthy"
 
-    def test_run_all_checks_with_exception(
+    @pytest.mark.asyncio
+    async def test_run_all_checks_with_exception(
         self, health_checker, mock_config, mock_db_manager
     ):
         """Test running all health checks with an exception."""
         # Mock a check to raise an exception
         with patch.object(
+            health_checker,
+            "_check_filesystem",
+            return_value=("healthy", "Filesystem accessible"),
+        ), patch.object(
+            health_checker,
+            "_check_configuration",
+            return_value=("healthy", "Configuration valid"),
+        ), patch.object(
+            health_checker,
+            "_check_database",
+            return_value=("healthy", "Database connected"),
+        ), patch.object(
+            health_checker,
+            "_check_memory",
+            return_value=("healthy", "Memory usage normal"),
+        ), patch.object(
+            health_checker,
+            "_check_disk_space",
+            return_value=("healthy", "Disk space available"),
+        ), patch.object(
             health_checker,
             "_check_config_paths",
             side_effect=Exception("Test exception"),
@@ -128,7 +191,7 @@ class TestHealthChecker:
             "_check_temp_directory_access",
             return_value=("healthy", "Temp directory accessible"),
         ):
-            results = health_checker.run_all_checks()
+            results = await health_checker.run_all_checks()
 
             assert results["overall_status"] == "unhealthy"
             assert results["checks"]["config_paths"]["status"] == "error"
@@ -185,7 +248,10 @@ class TestHealthChecker:
         """Test successful database connection check."""
         # Mock successful database session
         mock_session = Mock()
-        mock_db_manager.get_session.return_value.__enter__.return_value = mock_session
+        mock_context_manager = Mock()
+        mock_context_manager.__enter__ = Mock(return_value=mock_session)
+        mock_context_manager.__exit__ = Mock(return_value=None)
+        mock_db_manager.get_session.return_value = mock_context_manager
 
         status, message = health_checker._check_database_connection()
 
