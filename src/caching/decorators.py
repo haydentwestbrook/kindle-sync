@@ -18,7 +18,7 @@ def cached(
     ttl: Optional[int] = None,
     key_prefix: Optional[str] = None,
     cache_none: bool = False,
-):
+) -> Callable:
     """
     Decorator to cache function results.
 
@@ -102,7 +102,9 @@ def cached(
     return decorator
 
 
-def cache_invalidate(pattern: Optional[str] = None, key_prefix: Optional[str] = None):
+def cache_invalidate(
+    pattern: Optional[str] = None, key_prefix: Optional[str] = None
+) -> Callable:
     """
     Decorator to invalidate cache entries after function execution.
 

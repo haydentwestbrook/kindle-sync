@@ -18,7 +18,7 @@ def rate_limit(
     window: int,
     key_func: Optional[Callable] = None,
     error_message: str = "Rate limit exceeded",
-):
+) -> Callable:
     """
     Decorator to rate limit function calls.
 
@@ -96,7 +96,7 @@ def rate_limit_async(
     window: int,
     key_func: Optional[Callable] = None,
     error_message: str = "Rate limit exceeded",
-):
+) -> Callable:
     """
     Decorator specifically for async functions to rate limit calls.
 
@@ -142,7 +142,7 @@ def rate_limit_by_user(
     window: int,
     user_id_arg: Union[int, str] = 0,
     error_message: str = "Rate limit exceeded",
-):
+) -> Callable:
     """
     Decorator to rate limit by user ID.
 
@@ -174,7 +174,7 @@ def rate_limit_by_user(
 
 def rate_limit_by_ip(
     limit: int, window: int, error_message: str = "Rate limit exceeded"
-):
+) -> Callable:
     """
     Decorator to rate limit by IP address.
 

@@ -236,7 +236,7 @@ class AsyncKindleSyncApp:
             raise
 
 
-async def main():
+async def main() -> None:
     """Main entry point for the async application."""
     try:
         # Set up logging

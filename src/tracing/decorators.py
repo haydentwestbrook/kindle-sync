@@ -16,7 +16,7 @@ def trace_function(
     operation_name: Optional[str] = None,
     attributes: Optional[Dict[str, Any]] = None,
     record_exceptions: bool = True,
-):
+) -> Callable:
     """
     Decorator to automatically create a trace span for a synchronous function.
 
@@ -31,7 +31,7 @@ def trace_function(
 
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             tracer = trace.get_tracer(__name__)
             span_name = operation_name or f"{func.__module__}.{func.__name__}"
 
@@ -65,7 +65,7 @@ def trace_async_function(
     operation_name: Optional[str] = None,
     attributes: Optional[Dict[str, Any]] = None,
     record_exceptions: bool = True,
-):
+) -> Callable:
     """
     Decorator to automatically create a trace span for an asynchronous function.
 
@@ -115,7 +115,7 @@ def trace_class_methods(
     operation_name_prefix: Optional[str] = None,
     exclude_methods: Optional[set] = None,
     include_private: bool = False,
-):
+) -> Callable:
     """
     Class decorator to automatically trace all methods of a class.
 
@@ -128,7 +128,7 @@ def trace_class_methods(
         Decorated class
     """
 
-    def decorator(cls):
+    def decorator(cls: Any) -> Any:
         exclude_methods_set = exclude_methods or {
             "__init__",
             "__new__",
@@ -176,7 +176,7 @@ def trace_class_methods(
     return decorator
 
 
-def trace_database_operation(operation_type: str):
+def trace_database_operation(operation_type: str) -> Callable:
     """
     Decorator specifically for database operations.
 
@@ -189,7 +189,7 @@ def trace_database_operation(operation_type: str):
 
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             tracer = trace.get_tracer(__name__)
             span_name = f"db.{operation_type.lower()}"
 
@@ -220,7 +220,7 @@ def trace_database_operation(operation_type: str):
     return decorator
 
 
-def trace_http_request(method: str, url: str):
+def trace_http_request(method: str, url: str) -> Callable:
     """
     Decorator for HTTP requests.
 
@@ -234,7 +234,7 @@ def trace_http_request(method: str, url: str):
 
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             tracer = trace.get_tracer(__name__)
             span_name = f"http.{method.lower()}"
 
@@ -262,7 +262,7 @@ def trace_http_request(method: str, url: str):
     return decorator
 
 
-def trace_file_operation(operation_type: str):
+def trace_file_operation(operation_type: str) -> Callable:
     """
     Decorator for file operations.
 
@@ -275,7 +275,7 @@ def trace_file_operation(operation_type: str):
 
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
-        def wrapper(*args, **kwargs):
+        def wrapper(*args: Any, **kwargs: Any) -> Any:
             tracer = trace.get_tracer(__name__)
             span_name = f"file.{operation_type.lower()}"
 

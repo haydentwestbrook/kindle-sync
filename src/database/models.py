@@ -31,7 +31,7 @@ class ProcessingStatus(str, Enum):
     SKIPPED = "skipped"
 
 
-class ProcessedFile(Base):
+class ProcessedFile(Base):  # type: ignore
     """Model for tracking processed files."""
 
     __tablename__ = "processed_files"
@@ -59,7 +59,7 @@ class ProcessedFile(Base):
     )
 
 
-class FileOperation(Base):
+class FileOperation(Base):  # type: ignore
     """Model for tracking individual operations on files."""
 
     __tablename__ = "file_operations"
@@ -84,7 +84,7 @@ class FileOperation(Base):
     )
 
 
-class SystemMetrics(Base):
+class SystemMetrics(Base):  # type: ignore
     """Model for storing system performance metrics."""
 
     __tablename__ = "system_metrics"
@@ -100,7 +100,7 @@ class SystemMetrics(Base):
     __table_args__ = (Index("idx_timestamp_metric", "timestamp", "metric_name"),)
 
 
-class HealthCheck(Base):
+class HealthCheck(Base):  # type: ignore
     """Model for storing health check results."""
 
     __tablename__ = "health_checks"
@@ -120,7 +120,7 @@ class HealthCheck(Base):
     )
 
 
-class ProcessingQueue(Base):
+class ProcessingQueue(Base):  # type: ignore
     """Model for managing processing queue."""
 
     __tablename__ = "processing_queue"

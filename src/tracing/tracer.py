@@ -6,7 +6,7 @@ Provides tracing capabilities for monitoring request flows across the applicatio
 
 import os
 from contextlib import contextmanager
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Generator, Optional
 
 from loguru import logger
 from opentelemetry import trace
@@ -36,8 +36,8 @@ class TracingManager:
         self.service_name = service_name
         self.config = config or {}
         self.tracer_provider: Optional[TracerProvider] = None
-        self.tracer = None
-        self._instrumentors = []
+        self.tracer: Optional[Any] = None
+        self._instrumentors: list[Any] = []
 
     def setup_tracing(self) -> bool:
         """
@@ -80,7 +80,7 @@ class TracingManager:
             logger.error(f"Failed to initialize distributed tracing: {e}")
             return False
 
-    def _setup_exporters(self):
+    def _setup_exporters(self) -> None:
         """Set up trace exporters based on configuration."""
         exporters = self.config.get("exporters", {})
 
@@ -109,7 +109,7 @@ class TracingManager:
             self.tracer_provider.add_span_processor(span_processor)
             logger.info("OTLP exporter configured")
 
-    def _setup_instrumentation(self):
+    def _setup_instrumentation(self) -> None:
         """Set up automatic instrumentation for common libraries."""
         instrumentation_config = self.config.get("instrumentation", {})
 
@@ -143,7 +143,7 @@ class TracingManager:
             except Exception as e:
                 logger.warning(f"Failed to instrument Requests: {e}")
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         """Shutdown tracing and clean up resources."""
         try:
             # Uninstrument all instrumentors
@@ -163,7 +163,9 @@ class TracingManager:
             logger.error(f"Error during tracing shutdown: {e}")
 
     @contextmanager
-    def trace_span(self, name: str, attributes: Optional[Dict[str, Any]] = None):
+    def trace_span(
+        self, name: str, attributes: Optional[Dict[str, Any]] = None
+    ) -> Generator[Any, None, None]:
         """
         Context manager for creating a trace span.
 
@@ -184,7 +186,9 @@ class TracingManager:
                     span.set_attribute(key, value)
             yield span
 
-    def add_span_event(self, name: str, attributes: Optional[Dict[str, Any]] = None):
+    def add_span_event(
+        self, name: str, attributes: Optional[Dict[str, Any]] = None
+    ) -> None:
         """
         Add an event to the current span.
 
@@ -196,7 +200,7 @@ class TracingManager:
         if current_span and current_span.is_recording():
             current_span.add_event(name, attributes or {})
 
-    def set_span_attribute(self, key: str, value: Any):
+    def set_span_attribute(self, key: str, value: Any) -> None:
         """
         Set an attribute on the current span.
 
@@ -208,7 +212,9 @@ class TracingManager:
         if current_span and current_span.is_recording():
             current_span.set_attribute(key, value)
 
-    def set_span_status(self, status_code: str, description: Optional[str] = None):
+    def set_span_status(
+        self, status_code: str, description: Optional[str] = None
+    ) -> None:
         """
         Set the status of the current span.
 
@@ -253,7 +259,7 @@ def initialize_tracing(
     return True
 
 
-def get_tracer():
+def get_tracer() -> Optional[Any]:
     """
     Get the global tracer instance.
 
@@ -275,7 +281,7 @@ def get_tracing_manager() -> Optional[TracingManager]:
     return _tracing_manager
 
 
-def shutdown_tracing():
+def shutdown_tracing() -> None:
     """Shutdown global tracing manager."""
     global _tracing_manager
 

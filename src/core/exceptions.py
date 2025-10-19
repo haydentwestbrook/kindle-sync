@@ -36,7 +36,7 @@ class FileProcessingError(KindleSyncError):
         message: str,
         file_path: Optional[str] = None,
         severity: ErrorSeverity = ErrorSeverity.MEDIUM,
-        **kwargs,
+        **kwargs: Any,
     ):
         context = kwargs.get("context", {})
         if file_path:
@@ -52,7 +52,7 @@ class EmailServiceError(KindleSyncError):
         message: str,
         email_address: Optional[str] = None,
         severity: ErrorSeverity = ErrorSeverity.HIGH,
-        **kwargs,
+        **kwargs: Any,
     ):
         context = kwargs.get("context", {})
         if email_address:
@@ -68,7 +68,7 @@ class ConfigurationError(KindleSyncError):
         message: str,
         config_key: Optional[str] = None,
         severity: ErrorSeverity = ErrorSeverity.HIGH,
-        **kwargs,
+        **kwargs: Any,
     ):
         context = kwargs.get("context", {})
         if config_key:
@@ -84,7 +84,7 @@ class ValidationError(KindleSyncError):
         message: str,
         field_name: Optional[str] = None,
         severity: ErrorSeverity = ErrorSeverity.MEDIUM,
-        **kwargs,
+        **kwargs: Any,
     ):
         context = kwargs.get("context", {})
         if field_name:
@@ -100,7 +100,7 @@ class SecretsError(KindleSyncError):
         message: str,
         secret_key: Optional[str] = None,
         severity: ErrorSeverity = ErrorSeverity.CRITICAL,
-        **kwargs,
+        **kwargs: Any,
     ):
         context = kwargs.get("context", {})
         if secret_key:

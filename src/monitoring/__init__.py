@@ -8,7 +8,7 @@ try:
 
     PROMETHEUS_AVAILABLE = True
 except ImportError:
-    PrometheusExporter = None
+    PrometheusExporter = None  # type: ignore
     PROMETHEUS_AVAILABLE = False
 
 __all__ = [

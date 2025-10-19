@@ -47,7 +47,7 @@ class RateLimiter(ABC):
 class SlidingWindowRateLimiter(RateLimiter):
     """Rate limiter using sliding window algorithm."""
 
-    def __init__(self, cache_backend=None):
+    def __init__(self, cache_backend: Optional[Any] = None) -> None:
         """
         Initialize sliding window rate limiter.
 
@@ -120,7 +120,7 @@ class SlidingWindowRateLimiter(RateLimiter):
 class TokenBucketRateLimiter(RateLimiter):
     """Rate limiter using token bucket algorithm."""
 
-    def __init__(self, cache_backend=None):
+    def __init__(self, cache_backend: Optional[Any] = None) -> None:
         """
         Initialize token bucket rate limiter.
 
@@ -202,7 +202,7 @@ class TokenBucketRateLimiter(RateLimiter):
 class FixedWindowRateLimiter(RateLimiter):
     """Rate limiter using fixed window algorithm."""
 
-    def __init__(self, cache_backend=None):
+    def __init__(self, cache_backend: Optional[Any] = None) -> None:
         """
         Initialize fixed window rate limiter.
 
@@ -268,7 +268,7 @@ _rate_limiter: Optional[RateLimiter] = None
 
 
 def initialize_rate_limiter(
-    limiter_type: str = "sliding_window", cache_backend=None
+    limiter_type: str = "sliding_window", cache_backend: Optional[Any] = None
 ) -> RateLimiter:
     """
     Initialize global rate limiter.
