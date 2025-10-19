@@ -12,7 +12,7 @@ from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 
 from .config import Config
-from .core.exceptions import FileProcessingError, ErrorSeverity
+from .core.exceptions import ErrorSeverity, FileProcessingError
 
 
 class MarkdownToPDFConverter:

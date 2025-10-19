@@ -560,8 +560,8 @@ class HealthChecker:
 
     def _check_temp_directory_access(self) -> tuple[str, str]:
         """Check temporary directory access."""
-        import tempfile
         import os
+        import tempfile
 
         # Test temp directory access
         temp_dir = Path(tempfile.gettempdir())
