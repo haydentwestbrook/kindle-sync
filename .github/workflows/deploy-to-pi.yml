@@ -148,7 +148,11 @@ jobs:
           ssh -i ~/.ssh/id_rsa -p ${{ env.PI_PORT }} ${{ env.PI_USER }}@${{ env.PI_IP }} "
             if [ -d '${{ env.PI_DIR }}' ]; then
               echo 'Repository exists, updating...'
-              cd ${{ env.PI_DIR }} && git pull
+              cd ${{ env.PI_DIR }} &&
+              git config pull.rebase false &&
+              git stash &&
+              git pull &&
+              echo 'Repository updated successfully'
             else
               echo 'Cloning repository...'
               git clone https://github.com/haydentwestbrook/kindle-sync.git ${{ env.PI_DIR }}

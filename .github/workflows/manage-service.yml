@@ -6,7 +6,11 @@ on:
       pi_ip:
         description: 'Raspberry Pi IP Address'
         required: true
-        default: '192.168.0.12'
+        default: '73.11.87.47'
+      pi_port:
+        description: 'SSH Port'
+        required: true
+        default: '2222'
       pi_user:
         description: 'SSH Username'
         required: true
@@ -26,6 +30,7 @@ on:
 
 env:
   PI_IP: ${{ github.event.inputs.pi_ip }}
+  PI_PORT: ${{ github.event.inputs.pi_port }}
   PI_USER: ${{ github.event.inputs.pi_user }}
   PI_DIR: '/home/hayden/kindle-sync'
 
@@ -43,17 +48,17 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.PI_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ env.PI_IP }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H -p ${{ env.PI_PORT }} ${{ env.PI_IP }} >> ~/.ssh/known_hosts
 
       - name: Test SSH connection
         run: |
-          ssh -i ~/.ssh/id_rsa -o ConnectTimeout=10 ${{ env.PI_USER }}@${{ env.PI_IP }} "echo 'SSH connection successful'"
+          ssh -i ~/.ssh/id_rsa -p ${{ env.PI_PORT }} -o ConnectTimeout=10 ${{ env.PI_USER }}@${{ env.PI_IP }} "echo 'SSH connection successful'"
 
       - name: Check service status
         if: ${{ github.event.inputs.action == 'status' }}
         run: |
           echo "📊 Service Status:"
-          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+          ssh -i ~/.ssh/id_rsa -p ${{ env.PI_PORT }} ${{ env.PI_USER }}@${{ env.PI_IP }} "
             sudo systemctl status kindle-sync.service --no-pager
           "
 
@@ -61,7 +66,7 @@ jobs:
         if: ${{ github.event.inputs.action == 'start' }}
         run: |
           echo "🚀 Starting service..."
-          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+          ssh -i ~/.ssh/id_rsa -p ${{ env.PI_PORT }} ${{ env.PI_USER }}@${{ env.PI_IP }} "
             sudo systemctl start kindle-sync.service &&
             sudo systemctl status kindle-sync.service --no-pager
           "
@@ -70,7 +75,7 @@ jobs:
         if: ${{ github.event.inputs.action == 'stop' }}
         run: |
           echo "🛑 Stopping service..."
-          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+          ssh -i ~/.ssh/id_rsa -p ${{ env.PI_PORT }} ${{ env.PI_USER }}@${{ env.PI_IP }} "
             sudo systemctl stop kindle-sync.service &&
             sudo systemctl status kindle-sync.service --no-pager
           "
@@ -79,7 +84,7 @@ jobs:
         if: ${{ github.event.inputs.action == 'restart' }}
         run: |
           echo "🔄 Restarting service..."
-          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+          ssh -i ~/.ssh/id_rsa -p ${{ env.PI_PORT }} ${{ env.PI_USER }}@${{ env.PI_IP }} "
             sudo systemctl restart kindle-sync.service &&
             sudo systemctl status kindle-sync.service --no-pager
           "
@@ -88,7 +93,7 @@ jobs:
         if: ${{ github.event.inputs.action == 'logs' }}
         run: |
           echo "📋 Service Logs (last 50 lines):"
-          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+          ssh -i ~/.ssh/id_rsa -p ${{ env.PI_PORT }} ${{ env.PI_USER }}@${{ env.PI_IP }} "
             sudo journalctl -u kindle-sync.service --no-pager -n 50
           "
 
@@ -96,8 +101,10 @@ jobs:
         if: ${{ github.event.inputs.action == 'update-config' }}
         run: |
           echo "⚙️ Updating configuration..."
-          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+          ssh -i ~/.ssh/id_rsa -p ${{ env.PI_PORT }} ${{ env.PI_USER }}@${{ env.PI_IP }} "
             cd ${{ env.PI_DIR }} &&
+            git config pull.rebase false &&
+            git stash &&
             git pull &&
             sudo systemctl restart kindle-sync.service &&
             echo 'Configuration updated and service restarted'
