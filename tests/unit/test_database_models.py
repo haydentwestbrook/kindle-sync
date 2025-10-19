@@ -146,8 +146,8 @@ class TestDatabaseModels:
         assert operation2.file == processed_file
 
     def test_metric_creation(self, session):
-        """Test creating a Metric record."""
-        metric = Metric(
+        """Test creating a SystemMetrics record."""
+        metric = SystemMetrics(
             name="files_processed_total",
             value=42.0,
             labels='{"status": "success", "file_type": ".md"}',
@@ -157,7 +157,7 @@ class TestDatabaseModels:
         session.commit()
 
         # Verify the record was created
-        retrieved = session.query(Metric).first()
+        retrieved = session.query(SystemMetrics).first()
         assert retrieved is not None
         assert retrieved.name == "files_processed_total"
         assert retrieved.value == 42.0
@@ -165,14 +165,14 @@ class TestDatabaseModels:
         assert retrieved.timestamp is not None
 
     def test_metric_without_labels(self, session):
-        """Test creating a Metric record without labels."""
-        metric = Metric(name="system_uptime_seconds", value=3600.0)
+        """Test creating a SystemMetrics record without labels."""
+        metric = SystemMetrics(name="system_uptime_seconds", value=3600.0)
 
         session.add(metric)
         session.commit()
 
         # Verify the record was created
-        retrieved = session.query(Metric).first()
+        retrieved = session.query(SystemMetrics).first()
         assert retrieved is not None
         assert retrieved.name == "system_uptime_seconds"
         assert retrieved.value == 3600.0
@@ -249,21 +249,21 @@ class TestDatabaseModels:
         assert before_creation <= processed_file.processed_at <= after_creation
 
     def test_metric_float_values(self, session):
-        """Test that Metric can handle various float values."""
+        """Test that SystemMetrics can handle various float values."""
         # Test with integer-like float
-        metric1 = Metric(name="count", value=42.0)
+        metric1 = SystemMetrics(name="count", value=42.0)
 
         # Test with decimal float
-        metric2 = Metric(name="rate", value=0.95)
+        metric2 = SystemMetrics(name="rate", value=0.95)
 
         # Test with large float
-        metric3 = Metric(name="size", value=1234567.89)
+        metric3 = SystemMetrics(name="size", value=1234567.89)
 
         session.add_all([metric1, metric2, metric3])
         session.commit()
 
         # Verify all were stored correctly
-        metrics = session.query(Metric).all()
+        metrics = session.query(SystemMetrics).all()
         assert len(metrics) == 3
 
         values = [m.value for m in metrics]

@@ -16,8 +16,8 @@ from src.core.exceptions import ErrorSeverity, FileProcessingError
 from src.file_watcher import ObsidianFileWatcher
 
 
-class TestFileWatcher:
-    """Test cases for FileWatcher."""
+class TestObsidianFileWatcher:
+    """Test cases for ObsidianFileWatcher."""
 
     @pytest.fixture
     def mock_config(self):
@@ -42,14 +42,14 @@ class TestFileWatcher:
 
     @pytest.fixture
     def file_watcher(self, mock_config):
-        """Create a FileWatcher instance."""
+        """Create a ObsidianFileWatcher instance."""
         with patch("src.file_watcher.Observer"):
-            return FileWatcher(mock_config)
+            return ObsidianFileWatcher(mock_config)
 
     def test_file_watcher_initialization(self, mock_config):
         """Test file watcher initialization."""
         with patch("src.file_watcher.Observer"):
-            watcher = FileWatcher(mock_config)
+            watcher = ObsidianFileWatcher(mock_config)
             assert watcher.config == mock_config
             assert watcher.observer is not None
 
