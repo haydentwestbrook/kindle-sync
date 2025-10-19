@@ -276,9 +276,12 @@ class TestFileValidator:
         validator = FileValidator()
         mime_type = validator._get_mime_type_from_extension(Path("test.md"))
         assert mime_type == "text/markdown"
-        
+
         # Test that fallback works for other extensions
-        assert validator._get_mime_type_from_extension(Path("test.pdf")) == "application/pdf"
+        assert (
+            validator._get_mime_type_from_extension(Path("test.pdf"))
+            == "application/pdf"
+        )
         assert validator._get_mime_type_from_extension(Path("test.txt")) == "text/plain"
 
         mime_type = validator._get_mime_type_from_extension(Path("test.pdf"))

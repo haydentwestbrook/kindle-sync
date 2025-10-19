@@ -234,9 +234,10 @@ class MarkdownToPDFConverter:
         """Fallback PDF generation using ReportLab."""
         # For testing purposes, if we're in a test environment, raise an exception
         import sys
-        if 'pytest' in sys.modules:
+
+        if "pytest" in sys.modules:
             raise Exception("ReportLab fallback failed for testing")
-            
+
         doc = SimpleDocTemplate(
             str(output_path),
             pagesize=self.page_size,
@@ -350,7 +351,7 @@ class PDFToMarkdownConverter:
                     file_path=str(pdf_path),
                     severity=ErrorSeverity.HIGH,
                 )
-            
+
             try:
                 import pdf2image
                 import pytesseract

@@ -174,8 +174,8 @@ class TestConfig:
                 "host": "smtp.gmail.com",
                 "port": 587,
                 "username": "test@gmail.com",
-                "password": "test_password"
-            }
+                "password": "test_password",
+            },
         }
 
         config_file = temp_dir / "test_config.yaml"
@@ -188,7 +188,7 @@ class TestConfig:
             # Create the test directory
             test_vault_path = temp_dir / "test_vault"
             test_vault_path.mkdir()
-            
+
             mock_expand.return_value = test_vault_path
             mock_secrets_instance = mock_secrets_class.return_value
             mock_secrets_instance.get_secret.return_value = None

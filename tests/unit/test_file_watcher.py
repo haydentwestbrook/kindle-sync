@@ -166,7 +166,7 @@ class TestObsidianFileWatcher:
         # Create the test file
         test_file = temp_directory / "test.md"
         test_file.write_text("# Test")
-        
+
         # Mock event
         mock_event = Mock()
         mock_event.event_type = "created"
@@ -186,7 +186,7 @@ class TestObsidianFileWatcher:
         # Create the test file
         test_file = temp_directory / "test.md"
         test_file.write_text("# Test")
-        
+
         # Mock event
         mock_event = Mock()
         mock_event.event_type = "modified"
@@ -208,7 +208,7 @@ class TestObsidianFileWatcher:
         new_file = temp_directory / "new.md"
         old_file.write_text("# Old")
         new_file.write_text("# New")
-        
+
         # Mock event
         mock_event = Mock()
         mock_event.event_type = "moved"
@@ -322,7 +322,7 @@ class TestObsidianFileWatcher:
         """Test debounce mechanism for rapid file changes."""
         # Set a longer debounce time for this test
         file_watcher.debounce_time = 2.0
-        
+
         # Mock event
         mock_event = Mock()
         mock_event.event_type = "modified"

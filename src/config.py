@@ -45,13 +45,13 @@ class ObsidianConfig(BaseModel):
         # Allow empty strings for default values
         if not v:
             return v
-            
+
         # Expand user path if it contains ~
         if isinstance(v, str) and "~" in v:
             v = Path(v).expanduser()
         elif isinstance(v, Path):
             v = v.expanduser()
-        
+
         if not v.exists():
             raise ValueError(f"Obsidian vault path does not exist: {v}")
         if not v.is_dir():
@@ -75,7 +75,7 @@ class KindleConfig(BaseModel):
         # Allow empty strings for default values
         if not v:
             return v
-            
+
         email_pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
         if not re.match(email_pattern, v):
             raise ValueError(f"Invalid email format: {v}")
@@ -206,17 +206,17 @@ class Config:
                 "vault_path": "",
                 "sync_folder": "Kindle Sync",
                 "templates_folder": "Templates",
-                "watch_subfolders": True
+                "watch_subfolders": True,
             }
-        
+
         # Add default kindle config if missing
         if "kindle" not in self._raw_config:
             self._raw_config["kindle"] = {
                 "email": "",
                 "approved_senders": [],
-                "usb_path": None
+                "usb_path": None,
             }
-        
+
         # Add default smtp config if missing
         if "smtp" not in self._raw_config:
             self._raw_config["smtp"] = {
@@ -224,7 +224,7 @@ class Config:
                 "port": 587,
                 "username": "",
                 "password": "",
-                "use_tls": True
+                "use_tls": True,
             }
 
     def _validate_and_parse_config(self) -> KindleSyncConfig:
@@ -232,7 +232,7 @@ class Config:
         try:
             # Handle environment variable overrides
             self._apply_env_overrides()
-            
+
             # Add default values for missing required fields
             self._add_default_values()
 
@@ -340,7 +340,7 @@ class Config:
         port = self.get("kindle.smtp_port") or self.get("smtp.port", 587)
         username = self.get("kindle.smtp_username") or self.get("smtp.username", "")
         password = self._get_smtp_password()
-        
+
         return {
             "server": server,
             "port": port,
@@ -369,10 +369,13 @@ class Config:
 
     def get_ocr_config(self) -> Dict[str, Any]:
         """Get OCR configuration."""
-        return self.get("processing.ocr", {
-            "language": "eng",
-            "confidence_threshold": 60,
-        })
+        return self.get(
+            "processing.ocr",
+            {
+                "language": "eng",
+                "confidence_threshold": 60,
+            },
+        )
 
     def get_imap_config(self) -> Dict[str, Any]:
         """Get IMAP configuration for email receiving."""
@@ -389,27 +392,36 @@ class Config:
 
     def get_ocr_config(self) -> Dict[str, Any]:
         """Get OCR configuration."""
-        return self.get("processing.ocr", {
-            "language": "eng",
-            "confidence_threshold": 60,
-        })
+        return self.get(
+            "processing.ocr",
+            {
+                "language": "eng",
+                "confidence_threshold": 60,
+            },
+        )
 
     def get_pdf_config(self) -> Dict[str, Any]:
         """Get PDF generation configuration."""
-        return self.get("processing.pdf", {
-            "page_size": "A4",
-            "margins": [72, 72, 72, 72],
-            "font_family": "Times-Roman",
-            "font_size": 12,
-            "line_spacing": 1.2,
-        })
+        return self.get(
+            "processing.pdf",
+            {
+                "page_size": "A4",
+                "margins": [72, 72, 72, 72],
+                "font_family": "Times-Roman",
+                "font_size": 12,
+                "line_spacing": 1.2,
+            },
+        )
 
     def get_markdown_config(self) -> Dict[str, Any]:
         """Get Markdown processing configuration."""
-        return self.get("processing.markdown", {
-            "extensions": ["tables", "fenced_code", "toc"],
-            "preserve_links": True,
-        })
+        return self.get(
+            "processing.markdown",
+            {
+                "extensions": ["tables", "fenced_code", "toc"],
+                "preserve_links": True,
+            },
+        )
 
     def get_sync_config(self) -> Dict[str, Any]:
         """Get sync configuration."""

@@ -64,7 +64,9 @@ class FileOperation(Base):  # type: ignore
     __tablename__ = "file_operations"
 
     id = Column(Integer, primary_key=True)
-    file_id = Column(Integer, ForeignKey("processed_files.id", ondelete="CASCADE"), nullable=False)
+    file_id = Column(
+        Integer, ForeignKey("processed_files.id", ondelete="CASCADE"), nullable=False
+    )
     operation_type = Column(String(50), nullable=False)  # convert, send, backup, etc.
     started_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
@@ -107,27 +109,27 @@ class SystemMetrics(Base):  # type: ignore
     def name(self) -> str:
         """Alias for metric_name."""
         return self.metric_name
-    
+
     @name.setter
     def name(self, value: str):
         """Alias for metric_name."""
         self.metric_name = value
-    
+
     @property
     def value(self) -> float:
         """Alias for metric_value."""
         return self.metric_value
-    
+
     @value.setter
     def value(self, value: float):
         """Alias for metric_value."""
         self.metric_value = value
-    
+
     @property
     def labels(self) -> str:
         """Alias for tags."""
         return self.tags
-    
+
     @labels.setter
     def labels(self, value: str):
         """Alias for tags."""

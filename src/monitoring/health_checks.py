@@ -125,7 +125,7 @@ class HealthChecker:
                 check_func = getattr(self, check_method_name)
             else:
                 check_func = self.checks[name]
-            
+
             timeout = self.check_timeouts[name]
 
             if asyncio.iscoroutinefunction(check_func):
@@ -145,12 +145,16 @@ class HealthChecker:
             elif isinstance(result, tuple) and len(result) == 2:
                 # Convert tuple (status, message) to HealthCheckResult
                 status_str, message = result
-                status = HealthStatus(status_str) if status_str in [s.value for s in HealthStatus] else HealthStatus.UNHEALTHY
+                status = (
+                    HealthStatus(status_str)
+                    if status_str in [s.value for s in HealthStatus]
+                    else HealthStatus.UNHEALTHY
+                )
                 result = HealthCheckResult(
                     name=name,
                     status=status,
                     response_time_ms=response_time,
-                    error_message=message if status != HealthStatus.HEALTHY else None
+                    error_message=message if status != HealthStatus.HEALTHY else None,
                 )
             else:
                 # Convert other types to HealthCheckResult
@@ -238,7 +242,7 @@ class HealthChecker:
 
         # Determine overall status
         overall_status = self.get_overall_status(results)
-        
+
         return {
             "overall_status": overall_status.value,
             "checks": {
@@ -246,16 +250,16 @@ class HealthChecker:
                     "status": result.status.value,
                     "message": result.error_message or f"{result.status.value}",
                     "response_time_ms": result.response_time_ms,
-                    "metadata": result.metadata
+                    "metadata": result.metadata,
                 }
                 for name, result in results.items()
-            }
+            },
         }
 
     def run_all_checks_sync(self) -> Dict[str, Any]:
         """
         Synchronous version of run_all_checks for testing.
-        
+
         Returns:
             Dictionary with overall status and individual check results
         """
@@ -483,10 +487,10 @@ class HealthChecker:
         vault_path = self.config.get_obsidian_vault_path()
         if not vault_path.exists():
             return ("unhealthy", f"Vault path does not exist: {vault_path}")
-        
+
         if not vault_path.is_dir():
             return ("unhealthy", f"Vault path is not a directory: {vault_path}")
-        
+
         # Check sync folder
         sync_folder = self.config.get_sync_folder_path()
         if not sync_folder.exists():
@@ -494,7 +498,7 @@ class HealthChecker:
                 sync_folder.mkdir(parents=True, exist_ok=True)
             except Exception as e:
                 return ("unhealthy", f"Sync folder not accessible: {e}")
-        
+
         # Check backup folder
         backup_folder = self.config.get_backup_folder_path()
         try:
@@ -505,7 +509,7 @@ class HealthChecker:
                     return ("unhealthy", f"Backup folder not creatable: {e}")
         except PermissionError as e:
             return ("unhealthy", f"Backup folder not creatable: {e}")
-        
+
         # Test write access to vault
         test_file = vault_path / ".health_check_test"
         try:
@@ -513,7 +517,7 @@ class HealthChecker:
             test_file.unlink()
         except Exception as e:
             return ("unhealthy", f"Vault not readable/writable: {e}")
-        
+
         return ("healthy", "All configured paths are accessible")
 
     def _check_database_connection(self) -> tuple[str, str]:
@@ -521,14 +525,14 @@ class HealthChecker:
         try:
             if not self.db_manager:
                 return ("unhealthy", "Database manager not available")
-            
+
             # Test database connection
             with self.db_manager.get_session() as session:
                 # Simple query to test connection
                 session.execute("SELECT 1")
-            
+
             return ("healthy", "Database connection successful")
-            
+
         except Exception as e:
             return ("unhealthy", f"Database connection failed: {e}")
 
@@ -537,16 +541,20 @@ class HealthChecker:
         try:
             # Get SMTP configuration
             smtp_config = self.config.get_smtp_config()
-            if not smtp_config.get("server") or not smtp_config.get("username") or not smtp_config.get("password"):
+            if (
+                not smtp_config.get("server")
+                or not smtp_config.get("username")
+                or not smtp_config.get("password")
+            ):
                 return ("unhealthy", "Incomplete SMTP configuration")
-            
+
             # Get Kindle email
             kindle_email = self.config.get_kindle_email()
             if not kindle_email:
                 return ("unhealthy", "Kindle email address not configured")
-            
+
             return ("healthy", "Email service configuration is complete")
-            
+
         except Exception as e:
             return ("unhealthy", f"Error checking email config: {e}")
 
@@ -554,19 +562,19 @@ class HealthChecker:
         """Check temporary directory access."""
         import tempfile
         import os
-        
+
         # Test temp directory access
         temp_dir = Path(tempfile.gettempdir())
         if not temp_dir.exists():
             return ("unhealthy", "Temporary directory not accessible or writable")
-        
+
         # Check write access using os.access
         try:
             if not os.access(str(temp_dir), os.W_OK):
                 return ("unhealthy", "Temporary directory not accessible or writable")
         except OSError as e:
             return ("unhealthy", f"Error accessing temporary directory: {e}")
-        
+
         # Test write access
         test_file = temp_dir / "kindle_sync_health_test"
         try:
@@ -574,5 +582,5 @@ class HealthChecker:
             test_file.unlink()
         except Exception as e:
             return ("unhealthy", f"Error accessing temporary directory: {e}")
-        
+
         return ("healthy", "Temporary directory is accessible")

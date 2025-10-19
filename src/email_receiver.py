@@ -48,7 +48,7 @@ class EmailReceiver:
             "emails_processed": 0,
             "pdfs_extracted": 0,
             "pdfs_downloaded": 0,
-            "errors": 0
+            "errors": 0,
         }
 
         logger.info("Email receiver initialized")
@@ -158,9 +158,13 @@ class EmailReceiver:
             )
 
             # Login
-            response = mail.login(self.imap_config["username"], self.imap_config["password"])
+            response = mail.login(
+                self.imap_config["username"], self.imap_config["password"]
+            )
             if response[0] != "OK":
-                raise EmailServiceError(f"Failed to login to IMAP server: {response[1]}")
+                raise EmailServiceError(
+                    f"Failed to login to IMAP server: {response[1]}"
+                )
 
             logger.info("Connected to IMAP server successfully")
             return mail
@@ -456,7 +460,9 @@ class EmailReceiver:
 
         except Exception as e:
             logger.error(f"Error saving PDF attachment: {e}")
-            raise EmailServiceError(f"Failed to save PDF attachment: {e}", severity=ErrorSeverity.MEDIUM) from e
+            raise EmailServiceError(
+                f"Failed to save PDF attachment: {e}", severity=ErrorSeverity.MEDIUM
+            ) from e
 
     def _extract_download_links(self, email_message) -> List[str]:
         """Extract download links from email body."""
@@ -648,14 +654,11 @@ class EmailReceiver:
             for part in email_message.walk():
                 if part.get_content_disposition() == "attachment":
                     filename = part.get_filename()
-                    if filename and filename.lower().endswith('.pdf'):
+                    if filename and filename.lower().endswith(".pdf"):
                         # Decode filename if needed
                         filename = self._decode_header(filename)
                         content = part.get_payload(decode=True)
-                        attachments.append({
-                            "filename": filename,
-                            "content": content
-                        })
+                        attachments.append({"filename": filename, "content": content})
         except Exception as e:
             logger.error(f"Error extracting PDF attachments: {e}")
         return attachments
@@ -665,16 +668,16 @@ class EmailReceiver:
         try:
             filename = attachment["filename"]
             content = attachment["content"]
-            
+
             # Get sync folder path
             sync_folder_path = self.config.get_sync_folder_path()
-            
+
             # Ensure sync folder exists
             sync_folder_path.mkdir(parents=True, exist_ok=True)
 
             # Try to save with original filename first
             pdf_path = sync_folder_path / filename
-            
+
             # If file exists, add timestamp to make it unique
             if pdf_path.exists():
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -691,7 +694,9 @@ class EmailReceiver:
 
         except Exception as e:
             logger.error(f"Error saving PDF attachment: {e}")
-            raise EmailServiceError(f"Failed to save PDF attachment: {e}", severity=ErrorSeverity.MEDIUM) from e
+            raise EmailServiceError(
+                f"Failed to save PDF attachment: {e}", severity=ErrorSeverity.MEDIUM
+            ) from e
 
     def _mark_email_as_read(self, imap, email_id):
         """Mark email as read."""
@@ -721,7 +726,9 @@ class EmailReceiver:
     def _record_processed_email(self, email_id):
         """Record email as processed."""
         try:
-            tracking_file_path = self.config.get("email_receiving.duplicate_tracking_file")
+            tracking_file_path = self.config.get(
+                "email_receiving.duplicate_tracking_file"
+            )
             if tracking_file_path:
                 tracking_file = Path(tracking_file_path)
                 tracking_file.parent.mkdir(parents=True, exist_ok=True)
@@ -741,5 +748,5 @@ class EmailReceiver:
             "emails_processed": 0,
             "pdfs_extracted": 0,
             "pdfs_downloaded": 0,
-            "errors": 0
+            "errors": 0,
         }

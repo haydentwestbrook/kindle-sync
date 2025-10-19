@@ -13,7 +13,12 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from src.core.exceptions import ErrorSeverity, KindleSyncError
 from src.database.manager import DatabaseManager
-from src.database.models import FileOperation, ProcessedFile, SystemMetrics, ProcessingStatus
+from src.database.models import (
+    FileOperation,
+    ProcessedFile,
+    SystemMetrics,
+    ProcessingStatus,
+)
 
 
 class TestDatabaseManager:
@@ -55,7 +60,6 @@ class TestDatabaseManager:
             session.query(FileOperation).first()
             session.query(SystemMetrics).first()
 
-
     def test_get_session(self, db_manager):
         """Test getting a database session."""
         with db_manager.get_session() as session:
@@ -64,7 +68,6 @@ class TestDatabaseManager:
             assert hasattr(session, "execute")
             assert hasattr(session, "add")
             assert hasattr(session, "commit")
-
 
     def test_record_file_processing_success(self, db_manager):
         """Test successfully recording file processing."""
@@ -105,8 +108,6 @@ class TestDatabaseManager:
 
         assert file_id is not None
         assert file_id > 0
-
-
 
     def test_get_file_processing_history_success(self, db_manager):
         """Test successfully retrieving file processing history."""
@@ -153,7 +154,6 @@ class TestDatabaseManager:
         assert operation_id is not None
         assert operation_id > 0
 
-
     def test_record_metric_success(self, db_manager):
         """Test successfully recording a metric."""
         db_manager.record_metric(
@@ -168,10 +168,10 @@ class TestDatabaseManager:
 
     def test_record_metric_without_tags(self, db_manager):
         """Test recording a metric without tags."""
-        db_manager.record_metric(metric_name="system_uptime_seconds", metric_value=3600.0)
+        db_manager.record_metric(
+            metric_name="system_uptime_seconds", metric_value=3600.0
+        )
 
         # Verify the metric was recorded
         metrics = db_manager.get_metrics("system_uptime_seconds")
         assert len(metrics) > 0
-
-

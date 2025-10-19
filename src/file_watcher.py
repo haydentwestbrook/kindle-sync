@@ -156,9 +156,9 @@ class ObsidianFileWatcher:
             "files_created": 0,
             "files_modified": 0,
             "files_moved": 0,
-            "errors": 0
+            "errors": 0,
         }
-        
+
         # Debouncing for _handle_file_event
         self.debounce_time = config.get("advanced.debounce_time", 2.0)
         self.pending_files: dict = {}
@@ -195,7 +195,7 @@ class ObsidianFileWatcher:
             logger.info(f"Started watching Obsidian vault: {vault_path}")
             logger.info(f"Sync folder: {sync_folder}")
             logger.info(f"Templates folder: {templates_folder}")
-            
+
             return True
         except Exception as e:
             logger.error(f"Failed to start file watcher: {e}")
@@ -222,32 +222,32 @@ class ObsidianFileWatcher:
     def get_watched_paths(self) -> List[str]:
         """Get the paths being watched."""
         watched_paths = set()
-        if self.observer and hasattr(self.observer, 'watches'):
+        if self.observer and hasattr(self.observer, "watches"):
             for watch in self.observer.watches:
                 watched_paths.add(str(Path(watch.path)))
-        
+
         # Always include the vault path
         vault_path = self.config.get_obsidian_vault_path()
         if vault_path:
             watched_paths.add(str(vault_path))
-            
+
         return list(watched_paths)
 
     def _handle_file_event(self, event):
         """Handle file system events."""
         try:
             self.stats["events_processed"] += 1
-            
+
             if event.event_type == "created":
                 self.stats["files_created"] += 1
             elif event.event_type == "modified":
                 self.stats["files_modified"] += 1
             elif event.event_type == "moved":
                 self.stats["files_moved"] += 1
-            
+
             if self.file_processor:
                 # Handle moved events - process both source and destination
-                if event.event_type == "moved" and hasattr(event, 'dest_path'):
+                if event.event_type == "moved" and hasattr(event, "dest_path"):
                     # Process destination file
                     dest_path = Path(event.dest_path)
                     if self._is_supported_file_type(dest_path.name):
@@ -261,7 +261,7 @@ class ObsidianFileWatcher:
                     file_path = Path(event.src_path)
                     if self._is_supported_file_type(file_path.name):
                         self._schedule_file_processing(file_path)
-                    
+
         except Exception as e:
             self.stats["errors"] += 1
             logger.error(f"Error handling file event: {e}")
@@ -272,7 +272,7 @@ class ObsidianFileWatcher:
         if self.debounce_time <= 0.1:
             self._process_file(file_path)
             return
-            
+
         # Cancel previous processing if file was modified again
         if file_path in self.pending_files:
             self.pending_files[file_path].cancel()
@@ -310,8 +310,7 @@ class ObsidianFileWatcher:
     def _is_supported_file_type(self, filename: str) -> bool:
         """Check if file type is supported."""
         filename_lower = filename.lower()
-        return (filename_lower.endswith('.md') or 
-                filename_lower.endswith('.pdf'))
+        return filename_lower.endswith(".md") or filename_lower.endswith(".pdf")
 
     def set_file_processor(self, processor):
         """Set the file processor."""
@@ -328,5 +327,5 @@ class ObsidianFileWatcher:
             "files_created": 0,
             "files_modified": 0,
             "files_moved": 0,
-            "errors": 0
+            "errors": 0,
         }

@@ -21,12 +21,12 @@ class TestDatabaseModels:
         """Create an in-memory SQLite engine for testing."""
         engine = create_engine("sqlite:///:memory:", echo=False)
         Base.metadata.create_all(engine)
-        
+
         # Enable foreign key constraints for SQLite
         with engine.connect() as conn:
             conn.execute(text("PRAGMA foreign_keys=ON"))
             conn.commit()
-        
+
         return engine
 
     @pytest.fixture

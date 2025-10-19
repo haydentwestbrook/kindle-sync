@@ -48,7 +48,9 @@ class TestHealthChecker:
         assert health_checker.db_manager == mock_db_manager
 
     @pytest.mark.asyncio
-    async def test_run_all_checks_success(self, health_checker, mock_config, mock_db_manager):
+    async def test_run_all_checks_success(
+        self, health_checker, mock_config, mock_db_manager
+    ):
         """Test running all health checks successfully."""
         # Mock all check methods to return healthy status
         with patch.object(

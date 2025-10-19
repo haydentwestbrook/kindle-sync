@@ -132,7 +132,7 @@ class FileValidator:
 
             # MIME type validation
             mime_type = self._get_mime_type(file_path)
-            
+
             # Content validation (do this first to catch corrupted files)
             content_valid, content_warnings = self._validate_content(
                 file_path, mime_type
@@ -148,7 +148,7 @@ class FileValidator:
                     mime_type=mime_type,
                     checksum=checksum,
                 )
-            
+
             # MIME type validation (after content validation)
             # For files with known extensions, be more lenient with MIME type validation
             extension = file_path.suffix.lower()
@@ -210,12 +210,12 @@ class FileValidator:
             if file_path.stat().st_size == 0:
                 # For empty files, use extension-based detection
                 return self._get_mime_type_from_extension(file_path)
-            
+
             # For known file types, use extension-based detection first
             extension = file_path.suffix.lower()
             if extension in [".md", ".pdf", ".txt"]:
                 return self._get_mime_type_from_extension(file_path)
-            
+
             # For other files, try magic library
             if self.mime_detector:
                 return self.mime_detector.from_file(str(file_path))

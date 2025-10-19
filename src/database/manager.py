@@ -35,16 +35,18 @@ class DatabaseManager:
             echo: Whether to echo SQL statements (for debugging)
         """
         # Convert Path objects to strings and handle file paths
-        if hasattr(database_url, '__fspath__'):  # Path object
+        if hasattr(database_url, "__fspath__"):  # Path object
             database_url = str(database_url)
-        
+
         # If it's a file path (not a full URL), convert to SQLite URL
-        if not database_url.startswith(('sqlite://', 'postgresql://', 'mysql://', 'oracle://')):
+        if not database_url.startswith(
+            ("sqlite://", "postgresql://", "mysql://", "oracle://")
+        ):
             # Ensure it's an absolute path for SQLite
-            if not database_url.startswith('/'):
+            if not database_url.startswith("/"):
                 database_url = str(Path(database_url).resolve())
             database_url = f"sqlite:///{database_url}"
-        
+
         self.database_url = database_url
         self.engine = create_engine(
             database_url,

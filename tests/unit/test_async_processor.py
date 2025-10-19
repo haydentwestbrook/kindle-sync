@@ -54,7 +54,9 @@ class TestAsyncSyncProcessor:
     @pytest.fixture
     def processor(self, mock_config, mock_db_manager):
         """Create an AsyncSyncProcessor instance."""
-        with patch("src.core.async_processor.DatabaseManager", return_value=mock_db_manager):
+        with patch(
+            "src.core.async_processor.DatabaseManager", return_value=mock_db_manager
+        ):
             return AsyncSyncProcessor(mock_config, max_workers=2)
 
     @pytest.mark.asyncio
@@ -67,10 +69,9 @@ class TestAsyncSyncProcessor:
 
         try:
             # Mock the file validation
-            processor.file_validator.validate_file = Mock(return_value=Mock(
-                valid=True, 
-                checksum="test_hash"
-            ))
+            processor.file_validator.validate_file = Mock(
+                return_value=Mock(valid=True, checksum="test_hash")
+            )
 
             result = await processor.process_file_async(temp_path)
 
@@ -96,10 +97,9 @@ class TestAsyncSyncProcessor:
 
         try:
             # Mock validation failure
-            processor.file_validator.validate_file = Mock(return_value=Mock(
-                valid=False, 
-                error="File too large"
-            ))
+            processor.file_validator.validate_file = Mock(
+                return_value=Mock(valid=False, error="File too large")
+            )
 
             result = await processor.process_file_async(temp_path)
 
