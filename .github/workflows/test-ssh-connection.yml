@@ -1,0 +1,50 @@
+name: Test SSH Connection
+
+on:
+  workflow_dispatch:
+    inputs:
+      pi_ip:
+        description: 'Raspberry Pi IP Address'
+        required: true
+        default: '192.168.0.12'
+      pi_user:
+        description: 'SSH Username'
+        required: true
+        default: 'hayden'
+
+env:
+  PI_IP: ${{ github.event.inputs.pi_ip }}
+  PI_USER: ${{ github.event.inputs.pi_user }}
+
+jobs:
+  test-ssh:
+    runs-on: ubuntu-latest
+    name: Test SSH Connection
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.PI_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ env.PI_IP }} >> ~/.ssh/known_hosts
+
+      - name: Test SSH connection
+        run: |
+          echo "Testing SSH connection to ${{ env.PI_USER }}@${{ env.PI_IP }}"
+          ssh -i ~/.ssh/id_rsa -o ConnectTimeout=10 ${{ env.PI_USER }}@${{ env.PI_IP }} "echo 'SSH connection successful!'"
+
+      - name: Get system info
+        run: |
+          echo "Getting system information..."
+          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+            echo '=== System Information ===' &&
+            echo 'OS:' && cat /etc/os-release | grep PRETTY_NAME &&
+            echo 'Python:' && python3 --version &&
+            echo 'Memory:' && free -h &&
+            echo 'Disk:' && df -h &&
+            echo 'Uptime:' && uptime
+          "
