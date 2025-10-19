@@ -1,16 +1,16 @@
 """Main sync processor that coordinates all components."""
 
-from pathlib import Path
 from typing import Any, Dict, Optional
 
 from loguru import logger
+from pathlib import Path
 
 from .config import Config
+from .core.error_handler import ErrorHandler
+from .core.exceptions import EmailServiceError, ErrorSeverity, FileProcessingError
 from .file_watcher import ObsidianFileWatcher
 from .kindle_sync import KindleSync
 from .pdf_converter import MarkdownToPDFConverter, PDFToMarkdownConverter
-from .core.exceptions import FileProcessingError, EmailServiceError, ErrorSeverity
-from .core.error_handler import ErrorHandler
 
 
 class SyncProcessor:
@@ -88,9 +88,11 @@ class SyncProcessor:
             error = FileProcessingError(
                 f"Unexpected error processing file: {e}",
                 file_path=str(file_path),
-                severity=ErrorSeverity.MEDIUM
+                severity=ErrorSeverity.MEDIUM,
             )
-            handled = self.error_handler.handle_error(error, {"file_path": str(file_path)})
+            handled = self.error_handler.handle_error(
+                error, {"file_path": str(file_path)}
+            )
             if not handled:
                 self.stats["errors"] += 1
 

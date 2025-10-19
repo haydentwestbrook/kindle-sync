@@ -6,11 +6,11 @@ import re
 import ssl
 from datetime import datetime, timedelta
 from email.header import decode_header
-from pathlib import Path
 from typing import List, Optional, Tuple
 
 import requests
 from loguru import logger
+from pathlib import Path
 
 from .config import Config
 

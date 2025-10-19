@@ -1,13 +1,13 @@
 """Unit tests for Kindle synchronization functionality."""
 
 from email.mime.multipart import MIMEMultipart
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
+from pathlib import Path
 
-from src.kindle_sync import KindleSync
 from src.core.exceptions import EmailServiceError, FileProcessingError
+from src.kindle_sync import KindleSync
 
 
 class TestKindleSync:

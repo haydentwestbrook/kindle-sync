@@ -1,11 +1,11 @@
 """PDF conversion utilities for Kindle Scribe optimization."""
 
-from pathlib import Path
 from typing import Dict, List, Optional
 
 import markdown
 import weasyprint
 from loguru import logger
+from pathlib import Path
 from reportlab.lib.enums import TA_CENTER, TA_JUSTIFY
 from reportlab.lib.pagesizes import A4, letter
 from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet

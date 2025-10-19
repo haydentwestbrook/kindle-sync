@@ -4,17 +4,18 @@ Unit tests for AsyncSyncProcessor.
 Tests the asynchronous file processing functionality.
 """
 
-import pytest
 import asyncio
-from unittest.mock import Mock, patch, AsyncMock
-from pathlib import Path
-import tempfile
 import os
+import tempfile
+from unittest.mock import AsyncMock, Mock, patch
 
-from src.core.async_processor import AsyncSyncProcessor, ProcessingResult
+import pytest
+from pathlib import Path
+
 from src.config import Config
+from src.core.async_processor import AsyncSyncProcessor, ProcessingResult
+from src.core.exceptions import EmailServiceError, ErrorSeverity, FileProcessingError
 from src.database.manager import DatabaseManager
-from src.core.exceptions import FileProcessingError, EmailServiceError, ErrorSeverity
 
 
 class TestAsyncSyncProcessor:
@@ -27,8 +28,12 @@ class TestAsyncSyncProcessor:
         config.get.side_effect = lambda key, default=None: {
             "advanced.max_file_size_mb": 50,
             "patterns.allowed_extensions": [".md", ".pdf", ".txt"],
-            "patterns.allowed_mime_types": ["text/markdown", "application/pdf", "text/plain"],
-            "advanced.retry_attempts": 3
+            "patterns.allowed_mime_types": [
+                "text/markdown",
+                "application/pdf",
+                "text/plain",
+            ],
+            "advanced.retry_attempts": 3,
         }.get(key, default)
         return config
 
@@ -44,17 +49,19 @@ class TestAsyncSyncProcessor:
     @pytest.fixture
     def processor(self, mock_config, mock_db_manager):
         """Create an AsyncSyncProcessor instance."""
-        with patch('src.core.async_processor.KindleSync'), \
-             patch('src.core.async_processor.MarkdownToPDFConverter'), \
-             patch('src.core.async_processor.PDFToMarkdownConverter'), \
-             patch('src.core.async_processor.FileValidator'), \
-             patch('src.core.async_processor.ErrorHandler'):
+        with patch("src.core.async_processor.KindleSync"), patch(
+            "src.core.async_processor.MarkdownToPDFConverter"
+        ), patch("src.core.async_processor.PDFToMarkdownConverter"), patch(
+            "src.core.async_processor.FileValidator"
+        ), patch(
+            "src.core.async_processor.ErrorHandler"
+        ):
             return AsyncSyncProcessor(mock_config, mock_db_manager, max_workers=2)
 
     @pytest.mark.asyncio
     async def test_process_file_async_success(self, processor, mock_db_manager):
         """Test successful async file processing."""
-        with tempfile.NamedTemporaryFile(suffix='.md', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(suffix=".md", delete=False) as temp_file:
             temp_file.write(b"# Test Document\n\nThis is a test.")
             temp_file.flush()
             temp_path = Path(temp_file.name)
@@ -63,10 +70,11 @@ class TestAsyncSyncProcessor:
             # Mock the file validation and processing
             processor.file_validator.calculate_checksum.return_value = "test_hash"
             processor.file_validator.validate_file.return_value = Mock(
-                valid=True,
-                checksum="test_hash"
+                valid=True, checksum="test_hash"
             )
-            processor.markdown_to_pdf.convert_markdown_to_pdf.return_value = temp_path.with_suffix('.pdf')
+            processor.markdown_to_pdf.convert_markdown_to_pdf.return_value = (
+                temp_path.with_suffix(".pdf")
+            )
             processor._send_pdf_to_kindle_async = AsyncMock(return_value=True)
 
             result = await processor.process_file_async(temp_path)
@@ -79,15 +87,19 @@ class TestAsyncSyncProcessor:
 
             # Verify database operations
             mock_db_manager.add_processed_file.assert_called_once()
-            assert mock_db_manager.add_processed_file.call_args[1]['status'] == 'success'
+            assert (
+                mock_db_manager.add_processed_file.call_args[1]["status"] == "success"
+            )
 
         finally:
             os.unlink(temp_path)
 
     @pytest.mark.asyncio
-    async def test_process_file_async_validation_failure(self, processor, mock_db_manager):
+    async def test_process_file_async_validation_failure(
+        self, processor, mock_db_manager
+    ):
         """Test async file processing with validation failure."""
-        with tempfile.NamedTemporaryFile(suffix='.md', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(suffix=".md", delete=False) as temp_file:
             temp_file.write(b"# Test Document\n\nThis is a test.")
             temp_file.flush()
             temp_path = Path(temp_file.name)
@@ -96,8 +108,7 @@ class TestAsyncSyncProcessor:
             # Mock validation failure
             processor.file_validator.calculate_checksum.return_value = "test_hash"
             processor.file_validator.validate_file.return_value = Mock(
-                valid=False,
-                error="File too large"
+                valid=False, error="File too large"
             )
 
             result = await processor.process_file_async(temp_path)
@@ -109,15 +120,17 @@ class TestAsyncSyncProcessor:
 
             # Verify database operations
             mock_db_manager.add_processed_file.assert_called_once()
-            assert mock_db_manager.add_processed_file.call_args[1]['status'] == 'failed'
+            assert mock_db_manager.add_processed_file.call_args[1]["status"] == "failed"
 
         finally:
             os.unlink(temp_path)
 
     @pytest.mark.asyncio
-    async def test_process_file_async_already_processed(self, processor, mock_db_manager):
+    async def test_process_file_async_already_processed(
+        self, processor, mock_db_manager
+    ):
         """Test async file processing when file is already processed."""
-        with tempfile.NamedTemporaryFile(suffix='.md', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(suffix=".md", delete=False) as temp_file:
             temp_file.write(b"# Test Document\n\nThis is a test.")
             temp_file.flush()
             temp_path = Path(temp_file.name)
@@ -125,7 +138,9 @@ class TestAsyncSyncProcessor:
         try:
             # Mock that file is already processed
             processor.file_validator.calculate_checksum.return_value = "test_hash"
-            mock_db_manager.get_processed_file_by_hash.return_value = Mock(id=1, status="success")
+            mock_db_manager.get_processed_file_by_hash.return_value = Mock(
+                id=1, status="success"
+            )
 
             result = await processor.process_file_async(temp_path)
 
@@ -140,9 +155,11 @@ class TestAsyncSyncProcessor:
             os.unlink(temp_path)
 
     @pytest.mark.asyncio
-    async def test_process_file_async_conversion_failure(self, processor, mock_db_manager):
+    async def test_process_file_async_conversion_failure(
+        self, processor, mock_db_manager
+    ):
         """Test async file processing with conversion failure."""
-        with tempfile.NamedTemporaryFile(suffix='.md', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(suffix=".md", delete=False) as temp_file:
             temp_file.write(b"# Test Document\n\nThis is a test.")
             temp_file.flush()
             temp_path = Path(temp_file.name)
@@ -151,8 +168,7 @@ class TestAsyncSyncProcessor:
             # Mock validation success but conversion failure
             processor.file_validator.calculate_checksum.return_value = "test_hash"
             processor.file_validator.validate_file.return_value = Mock(
-                valid=True,
-                checksum="test_hash"
+                valid=True, checksum="test_hash"
             )
             processor.markdown_to_pdf.convert_markdown_to_pdf.return_value = None
 
@@ -164,7 +180,7 @@ class TestAsyncSyncProcessor:
 
             # Verify database operations
             mock_db_manager.add_processed_file.assert_called_once()
-            assert mock_db_manager.add_processed_file.call_args[1]['status'] == 'failed'
+            assert mock_db_manager.add_processed_file.call_args[1]["status"] == "failed"
 
         finally:
             os.unlink(temp_path)
@@ -172,7 +188,7 @@ class TestAsyncSyncProcessor:
     @pytest.mark.asyncio
     async def test_process_file_async_retry_logic(self, processor, mock_db_manager):
         """Test async file processing with retry logic."""
-        with tempfile.NamedTemporaryFile(suffix='.md', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(suffix=".md", delete=False) as temp_file:
             temp_file.write(b"# Test Document\n\nThis is a test.")
             temp_file.flush()
             temp_path = Path(temp_file.name)
@@ -181,17 +197,20 @@ class TestAsyncSyncProcessor:
             # Mock validation success but email sending failure
             processor.file_validator.calculate_checksum.return_value = "test_hash"
             processor.file_validator.validate_file.return_value = Mock(
-                valid=True,
-                checksum="test_hash"
+                valid=True, checksum="test_hash"
             )
-            processor.markdown_to_pdf.convert_markdown_to_pdf.return_value = temp_path.with_suffix('.pdf')
-            
+            processor.markdown_to_pdf.convert_markdown_to_pdf.return_value = (
+                temp_path.with_suffix(".pdf")
+            )
+
             # Mock email sending to fail twice, then succeed
-            processor._send_pdf_to_kindle_async = AsyncMock(side_effect=[
-                EmailServiceError("SMTP error", severity=ErrorSeverity.MEDIUM),
-                EmailServiceError("SMTP error", severity=ErrorSeverity.MEDIUM),
-                True
-            ])
+            processor._send_pdf_to_kindle_async = AsyncMock(
+                side_effect=[
+                    EmailServiceError("SMTP error", severity=ErrorSeverity.MEDIUM),
+                    EmailServiceError("SMTP error", severity=ErrorSeverity.MEDIUM),
+                    True,
+                ]
+            )
 
             result = await processor.process_file_async(temp_path)
 
@@ -208,15 +227,15 @@ class TestAsyncSyncProcessor:
         """Test processor shutdown."""
         # Mock the executor
         processor.executor = Mock()
-        
+
         processor.shutdown()
-        
+
         processor.executor.shutdown.assert_called_once_with(wait=True)
 
     @pytest.mark.asyncio
     async def test_send_pdf_to_kindle_async(self, processor):
         """Test async PDF sending to Kindle."""
-        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_file:
             temp_file.write(b"%PDF-1.4\nTest PDF content")
             temp_file.flush()
             temp_path = Path(temp_file.name)
@@ -236,7 +255,7 @@ class TestAsyncSyncProcessor:
     @pytest.mark.asyncio
     async def test_process_single_file_markdown(self, processor):
         """Test processing a single markdown file."""
-        with tempfile.NamedTemporaryFile(suffix='.md', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(suffix=".md", delete=False) as temp_file:
             temp_file.write(b"# Test Document\n\nThis is a test.")
             temp_file.flush()
             temp_path = Path(temp_file.name)
@@ -244,13 +263,14 @@ class TestAsyncSyncProcessor:
         try:
             # Mock validation
             processor.file_validator.validate_file.return_value = Mock(
-                valid=True,
-                checksum="test_hash"
+                valid=True, checksum="test_hash"
             )
-            
+
             # Mock conversion
-            processor.markdown_to_pdf.convert_markdown_to_pdf.return_value = temp_path.with_suffix('.pdf')
-            
+            processor.markdown_to_pdf.convert_markdown_to_pdf.return_value = (
+                temp_path.with_suffix(".pdf")
+            )
+
             # Mock email sending
             processor._send_pdf_to_kindle_async = AsyncMock(return_value=True)
 
@@ -258,7 +278,7 @@ class TestAsyncSyncProcessor:
 
             assert result.success is True
             assert result.file_path == temp_path
-            assert result.output_path == temp_path.with_suffix('.pdf')
+            assert result.output_path == temp_path.with_suffix(".pdf")
 
         finally:
             os.unlink(temp_path)
@@ -266,7 +286,7 @@ class TestAsyncSyncProcessor:
     @pytest.mark.asyncio
     async def test_process_single_file_pdf(self, processor):
         """Test processing a single PDF file."""
-        with tempfile.NamedTemporaryFile(suffix='.pdf', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as temp_file:
             temp_file.write(b"%PDF-1.4\nTest PDF content")
             temp_file.flush()
             temp_path = Path(temp_file.name)
@@ -274,18 +294,19 @@ class TestAsyncSyncProcessor:
         try:
             # Mock validation
             processor.file_validator.validate_file.return_value = Mock(
-                valid=True,
-                checksum="test_hash"
+                valid=True, checksum="test_hash"
             )
-            
+
             # Mock conversion
-            processor.pdf_to_markdown.convert_pdf_to_markdown.return_value = temp_path.with_suffix('.md')
+            processor.pdf_to_markdown.convert_pdf_to_markdown.return_value = (
+                temp_path.with_suffix(".md")
+            )
 
             result = await processor._process_single_file(temp_path)
 
             assert result.success is True
             assert result.file_path == temp_path
-            assert result.output_path == temp_path.with_suffix('.md')
+            assert result.output_path == temp_path.with_suffix(".md")
 
         finally:
             os.unlink(temp_path)
@@ -293,7 +314,7 @@ class TestAsyncSyncProcessor:
     @pytest.mark.asyncio
     async def test_process_single_file_unsupported_type(self, processor):
         """Test processing an unsupported file type."""
-        with tempfile.NamedTemporaryFile(suffix='.txt', delete=False) as temp_file:
+        with tempfile.NamedTemporaryFile(suffix=".txt", delete=False) as temp_file:
             temp_file.write(b"Plain text content")
             temp_file.flush()
             temp_path = Path(temp_file.name)
@@ -301,8 +322,7 @@ class TestAsyncSyncProcessor:
         try:
             # Mock validation
             processor.file_validator.validate_file.return_value = Mock(
-                valid=True,
-                checksum="test_hash"
+                valid=True, checksum="test_hash"
             )
 
             result = await processor._process_single_file(temp_path)

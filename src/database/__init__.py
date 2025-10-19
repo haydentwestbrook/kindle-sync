@@ -1,18 +1,18 @@
 """Database package for persistent state management."""
 
 try:
-    from .models import Base, ProcessedFile, FileOperation, SystemMetrics, HealthCheck
     from .manager import DatabaseManager
     from .migrations import run_migrations
-    
+    from .models import Base, FileOperation, HealthCheck, ProcessedFile, SystemMetrics
+
     __all__ = [
         "Base",
-        "ProcessedFile", 
+        "ProcessedFile",
         "FileOperation",
         "SystemMetrics",
         "HealthCheck",
         "DatabaseManager",
-        "run_migrations"
+        "run_migrations",
     ]
 except ImportError:
     # SQLAlchemy not available
@@ -23,5 +23,5 @@ except ImportError:
     HealthCheck = None
     DatabaseManager = None
     run_migrations = None
-    
+
     __all__ = []

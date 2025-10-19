@@ -2,10 +2,10 @@
 
 import threading
 import time
-from pathlib import Path
 from unittest.mock import Mock, patch
 
 import pytest
+from pathlib import Path
 
 from src.sync_processor import SyncProcessor
 
@@ -55,7 +55,9 @@ This document tests the complete automation workflow.
         with patch.object(
             processor.markdown_to_pdf, "convert_markdown_to_pdf"
         ) as mock_convert_pdf:
-            with patch.object(processor.kindle_sync, "send_pdf_to_kindle") as mock_send_to_kindle:
+            with patch.object(
+                processor.kindle_sync, "send_pdf_to_kindle"
+            ) as mock_send_to_kindle:
                 with patch.object(processor.kindle_sync, "backup_file") as mock_backup:
                     # Mock successful operations
                     mock_backup.return_value = Path("/tmp/backup.md")
@@ -90,7 +92,9 @@ This document tests the complete automation workflow.
         processor = SyncProcessor(config)
 
         # Mock PDF conversion dependencies
-        with patch.object(processor.pdf_to_markdown, "convert_pdf_to_markdown") as mock_convert:
+        with patch.object(
+            processor.pdf_to_markdown, "convert_pdf_to_markdown"
+        ) as mock_convert:
             with patch.object(processor.kindle_sync, "backup_file") as mock_backup:
                 # Mock successful conversion
                 mock_backup.return_value = Path("/tmp/backup.pdf")
@@ -186,9 +190,19 @@ This document tests the complete automation workflow.
 
         def process_file(file_path):
             try:
-                with patch.object(processor.markdown_to_pdf, "convert_markdown_to_pdf", return_value=Path("/tmp/test.pdf")):
-                    with patch.object(processor.kindle_sync, "send_pdf_to_kindle", return_value=True):
-                        with patch.object(processor.kindle_sync, "backup_file", return_value=Path("/tmp/backup.md")):
+                with patch.object(
+                    processor.markdown_to_pdf,
+                    "convert_markdown_to_pdf",
+                    return_value=Path("/tmp/test.pdf"),
+                ):
+                    with patch.object(
+                        processor.kindle_sync, "send_pdf_to_kindle", return_value=True
+                    ):
+                        with patch.object(
+                            processor.kindle_sync,
+                            "backup_file",
+                            return_value=Path("/tmp/backup.md"),
+                        ):
                             processor._process_markdown_file(file_path)
                             results.append(file_path)
             except Exception as e:
@@ -232,7 +246,9 @@ This document tests the complete automation workflow.
         processor = SyncProcessor(config)
 
         # Mock operations with mixed success/failure
-        with patch.object(processor.markdown_to_pdf, "convert_markdown_to_pdf") as mock_convert:
+        with patch.object(
+            processor.markdown_to_pdf, "convert_markdown_to_pdf"
+        ) as mock_convert:
             with patch.object(processor.kindle_sync, "send_pdf_to_kindle") as mock_send:
                 with patch.object(processor.kindle_sync, "backup_file") as mock_backup:
                     # Configure mocks
@@ -286,8 +302,14 @@ This document tests the complete automation workflow.
 
         # Mock backup operations
         with patch.object(processor.kindle_sync, "backup_file") as mock_backup:
-            with patch.object(processor.markdown_to_pdf, "convert_markdown_to_pdf", return_value=Path("/tmp/test.pdf")):
-                with patch.object(processor.kindle_sync, "send_pdf_to_kindle", return_value=True):
+            with patch.object(
+                processor.markdown_to_pdf,
+                "convert_markdown_to_pdf",
+                return_value=Path("/tmp/test.pdf"),
+            ):
+                with patch.object(
+                    processor.kindle_sync, "send_pdf_to_kindle", return_value=True
+                ):
                     # Process files
                     for file_path in test_files:
                         processor._process_markdown_file(file_path)
@@ -299,11 +321,21 @@ This document tests the complete automation workflow.
                     with patch.object(
                         processor.kindle_sync, "cleanup_old_files"
                     ) as mock_cleanup:
-                        with patch.object(processor.config, "get_backup_folder_path", return_value=backup_folder):
-                            with patch.object(processor.config, "get_sync_folder_path", return_value=sync_folder):
+                        with patch.object(
+                            processor.config,
+                            "get_backup_folder_path",
+                            return_value=backup_folder,
+                        ):
+                            with patch.object(
+                                processor.config,
+                                "get_sync_folder_path",
+                                return_value=sync_folder,
+                            ):
                                 mock_cleanup.return_value = 3
 
-                                cleaned_count = processor.cleanup_old_files(max_age_days=30)
+                                cleaned_count = processor.cleanup_old_files(
+                                    max_age_days=30
+                                )
 
                                 assert cleaned_count == 6  # 3 from sync + 3 from backup
                                 assert mock_cleanup.call_count == 2
@@ -364,10 +396,24 @@ This document tests the complete automation workflow.
         processor = SyncProcessor(config)
 
         # Mock operations
-        with patch.object(processor.markdown_to_pdf, "convert_markdown_to_pdf", return_value=Path("/tmp/test.pdf")):
-            with patch.object(processor.kindle_sync, "send_pdf_to_kindle", return_value=True):
-                with patch.object(processor.kindle_sync, "backup_file", return_value=Path("/tmp/backup.md")):
-                    with patch.object(processor.pdf_to_markdown, "convert_pdf_to_markdown", return_value=Path("/tmp/test.md")):
+        with patch.object(
+            processor.markdown_to_pdf,
+            "convert_markdown_to_pdf",
+            return_value=Path("/tmp/test.pdf"),
+        ):
+            with patch.object(
+                processor.kindle_sync, "send_pdf_to_kindle", return_value=True
+            ):
+                with patch.object(
+                    processor.kindle_sync,
+                    "backup_file",
+                    return_value=Path("/tmp/backup.md"),
+                ):
+                    with patch.object(
+                        processor.pdf_to_markdown,
+                        "convert_pdf_to_markdown",
+                        return_value=Path("/tmp/test.md"),
+                    ):
                         # Process markdown file
                         processor._process_markdown_file(md_file)
 
@@ -443,11 +489,21 @@ This document tests the complete automation workflow.
                         )
 
                         # Simulate file processing
-                        with patch.object(processor.markdown_to_pdf, "convert_markdown_to_pdf", return_value=Path("/tmp/test.pdf")):
+                        with patch.object(
+                            processor.markdown_to_pdf,
+                            "convert_markdown_to_pdf",
+                            return_value=Path("/tmp/test.pdf"),
+                        ):
                             with patch.object(
-                                processor.kindle_sync, "send_pdf_to_kindle", return_value=True
+                                processor.kindle_sync,
+                                "send_pdf_to_kindle",
+                                return_value=True,
                             ):
-                                with patch.object(processor.kindle_sync, "backup_file", return_value=Path("/tmp/backup.md")):
+                                with patch.object(
+                                    processor.kindle_sync,
+                                    "backup_file",
+                                    return_value=Path("/tmp/backup.md"),
+                                ):
                                     processor._process_markdown_file(md_file)
 
                         # Stop the system

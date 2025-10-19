@@ -1,10 +1,10 @@
 """Unit tests for configuration management."""
 
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 import yaml
+from pathlib import Path
 
 from src.config import Config
 from src.core.exceptions import ConfigurationError
@@ -17,7 +17,7 @@ class TestConfig:
         """Test Config initialization with valid file."""
         config = Config(str(config_file))
         assert config.config_path == config_file
-    
+
         # The Config class expands relative paths, so we need to check the
         # expanded version
         expected_config = sample_config.copy()
@@ -175,12 +175,13 @@ class TestConfig:
         with open(config_file, "w") as f:
             yaml.dump(config_data, f)
 
-        with patch("pathlib.Path.expanduser") as mock_expand, \
-             patch("src.config.SecretsManager") as mock_secrets_class:
+        with patch("pathlib.Path.expanduser") as mock_expand, patch(
+            "src.config.SecretsManager"
+        ) as mock_secrets_class:
             mock_expand.return_value = Path("/home/user/test_vault")
             mock_secrets_instance = mock_secrets_class.return_value
             mock_secrets_instance.get_secret.return_value = None
-            
+
             config = Config(str(config_file))
 
             # Verify expanduser was called

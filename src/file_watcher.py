@@ -1,10 +1,10 @@
 """File watcher for monitoring Obsidian vault changes."""
 
 import time
-from pathlib import Path
 from typing import Callable, Set
 
 from loguru import logger
+from pathlib import Path
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 

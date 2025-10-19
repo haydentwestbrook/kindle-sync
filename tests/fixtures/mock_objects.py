@@ -5,9 +5,10 @@ import tempfile
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 from unittest.mock import Mock
+
+from pathlib import Path
 
 from .sample_data import SampleData
 

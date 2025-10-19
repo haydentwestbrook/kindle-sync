@@ -1,19 +1,19 @@
 """Kindle Scribe synchronization functionality."""
 
 import shutil
-import smtplib
 from email.mime.application import MIMEApplication
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from pathlib import Path
 from typing import List, Optional
 
+import smtplib
 from loguru import logger
+from pathlib import Path
 
 from .config import Config
-from .core.exceptions import EmailServiceError, FileProcessingError, ErrorSeverity
-from .core.retry import retry_on_network_error, retry_on_file_error
-from .security.validation import FileValidator, FileValidationRequest
+from .core.exceptions import EmailServiceError, ErrorSeverity, FileProcessingError
+from .core.retry import retry_on_file_error, retry_on_network_error
+from .security.validation import FileValidationRequest, FileValidator
 
 
 class KindleSync:
@@ -36,15 +36,15 @@ class KindleSync:
             validation_request = FileValidationRequest(
                 file_path=pdf_path,
                 allowed_extensions=[".pdf"],
-                allowed_mime_types=["application/pdf"]
+                allowed_mime_types=["application/pdf"],
             )
             validation_result = self.file_validator.validate_file(validation_request)
-            
+
             if not validation_result.valid:
                 raise FileProcessingError(
                     f"PDF validation failed: {validation_result.error}",
                     file_path=str(pdf_path),
-                    severity=ErrorSeverity.HIGH
+                    severity=ErrorSeverity.HIGH,
                 )
 
             # Generate subject if not provided
@@ -81,7 +81,7 @@ class KindleSync:
             raise EmailServiceError(
                 f"Error sending PDF to Kindle: {e}",
                 email_address=self.kindle_email,
-                severity=ErrorSeverity.HIGH
+                severity=ErrorSeverity.HIGH,
             )
 
     @retry_on_network_error(max_attempts=3, wait_min=2.0, wait_max=30.0)
@@ -104,7 +104,7 @@ class KindleSync:
             raise EmailServiceError(
                 f"Error sending email: {e}",
                 email_address=self.kindle_email,
-                severity=ErrorSeverity.HIGH
+                severity=ErrorSeverity.HIGH,
             )
 
     def copy_to_kindle_usb(
@@ -148,16 +148,15 @@ class KindleSync:
 
             # Validate file before backup
             validation_request = FileValidationRequest(
-                file_path=file_path,
-                max_size_mb=100  # Allow larger files for backup
+                file_path=file_path, max_size_mb=100  # Allow larger files for backup
             )
             validation_result = self.file_validator.validate_file(validation_request)
-            
+
             if not validation_result.valid:
                 raise FileProcessingError(
                     f"File validation failed for backup: {validation_result.error}",
                     file_path=str(file_path),
-                    severity=ErrorSeverity.MEDIUM
+                    severity=ErrorSeverity.MEDIUM,
                 )
 
             backup_folder = Path(self.sync_config.get("backup_folder", "Backups"))
@@ -181,7 +180,7 @@ class KindleSync:
             raise FileProcessingError(
                 f"Error creating backup: {e}",
                 file_path=str(file_path),
-                severity=ErrorSeverity.MEDIUM
+                severity=ErrorSeverity.MEDIUM,
             )
 
     def get_kindle_documents(self, kindle_path: Optional[Path] = None) -> List[Path]:

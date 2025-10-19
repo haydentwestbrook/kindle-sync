@@ -5,6 +5,7 @@ from .metrics import MetricsCollector
 
 try:
     from .prometheus_exporter import PrometheusExporter
+
     PROMETHEUS_AVAILABLE = True
 except ImportError:
     PrometheusExporter = None
@@ -12,7 +13,7 @@ except ImportError:
 
 __all__ = [
     "HealthChecker",
-    "HealthStatus", 
+    "HealthStatus",
     "MetricsCollector",
 ]
 

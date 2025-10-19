@@ -1,9 +1,9 @@
 """Sample data fixtures for testing."""
 
-from pathlib import Path
 from typing import Any, Dict
 
 import yaml
+from pathlib import Path
 
 
 class SampleData:

@@ -6,24 +6,31 @@ in Prometheus format for monitoring and alerting.
 """
 
 import asyncio
-from aiohttp import web, ClientSession
-from aiohttp.web import Request, Response
-from typing import Dict, Any, Optional
-from pathlib import Path
 import json
-from loguru import logger
+from typing import Any, Dict, Optional
 
-from .metrics import MetricsCollector
-from .health_checks import HealthChecker
-from ..database.manager import DatabaseManager
+from aiohttp import ClientSession, web
+from aiohttp.web import Request, Response
+from loguru import logger
+from pathlib import Path
+
 from ..config import Config
-from ..core.exceptions import MonitoringError, ErrorSeverity
+from ..core.exceptions import ErrorSeverity, MonitoringError
+from ..database.manager import DatabaseManager
+from .health_checks import HealthChecker
+from .metrics import MetricsCollector
 
 
 class PrometheusExporter:
     """Prometheus metrics exporter with health check endpoints."""
 
-    def __init__(self, config: Config, db_manager: DatabaseManager, metrics_collector: MetricsCollector, health_checker: HealthChecker):
+    def __init__(
+        self,
+        config: Config,
+        db_manager: DatabaseManager,
+        metrics_collector: MetricsCollector,
+        health_checker: HealthChecker,
+    ):
         self.config = config
         self.db_manager = db_manager
         self.metrics_collector = metrics_collector
@@ -35,15 +42,16 @@ class PrometheusExporter:
 
     def _setup_routes(self):
         """Set up HTTP routes for metrics and health checks."""
-        self.app.router.add_get('/metrics', self._metrics_handler)
-        self.app.router.add_get('/health', self._health_handler)
-        self.app.router.add_get('/health/ready', self._readiness_handler)
-        self.app.router.add_get('/health/live', self._liveness_handler)
-        self.app.router.add_get('/status', self._status_handler)
+        self.app.router.add_get("/metrics", self._metrics_handler)
+        self.app.router.add_get("/health", self._health_handler)
+        self.app.router.add_get("/health/ready", self._readiness_handler)
+        self.app.router.add_get("/health/live", self._liveness_handler)
+        self.app.router.add_get("/status", self._status_handler)
         logger.info("HTTP routes configured.")
 
     def _setup_middleware(self):
         """Set up middleware for request logging and error handling."""
+
         @web.middleware
         async def error_middleware(request: Request, handler):
             try:
@@ -51,8 +59,7 @@ class PrometheusExporter:
             except Exception as e:
                 logger.error(f"Error in {request.path}: {e}")
                 return web.json_response(
-                    {"error": "Internal server error", "message": str(e)},
-                    status=500
+                    {"error": "Internal server error", "message": str(e)}, status=500
                 )
 
         @web.middleware
@@ -60,7 +67,9 @@ class PrometheusExporter:
             start_time = asyncio.get_event_loop().time()
             response = await handler(request)
             duration = asyncio.get_event_loop().time() - start_time
-            logger.info(f"{request.method} {request.path} - {response.status} ({duration:.3f}s)")
+            logger.info(
+                f"{request.method} {request.path} - {response.status} ({duration:.3f}s)"
+            )
             return response
 
         self.app.middlewares.append(error_middleware)
@@ -71,30 +80,31 @@ class PrometheusExporter:
         try:
             # Update queue and task metrics
             self._update_dynamic_metrics()
-            
+
             # Generate Prometheus format metrics
             metrics_data = self.metrics_collector.get_latest_metrics()
-            
+
             return Response(
                 body=metrics_data,
-                content_type='text/plain; version=0.0.4; charset=utf-8'
+                content_type="text/plain; version=0.0.4; charset=utf-8",
             )
         except Exception as e:
             logger.error(f"Error generating metrics: {e}")
-            raise MonitoringError(f"Failed to generate metrics: {e}", severity=ErrorSeverity.MEDIUM)
+            raise MonitoringError(
+                f"Failed to generate metrics: {e}", severity=ErrorSeverity.MEDIUM
+            )
 
     async def _health_handler(self, request: Request) -> Response:
         """Handle /health endpoint for overall health status."""
         try:
             health_results = self.health_checker.run_all_checks()
             status_code = 200 if health_results["overall_status"] == "healthy" else 503
-            
+
             return web.json_response(health_results, status=status_code)
         except Exception as e:
             logger.error(f"Error running health checks: {e}")
             return web.json_response(
-                {"overall_status": "error", "error": str(e)},
-                status=500
+                {"overall_status": "error", "error": str(e)}, status=500
             )
 
     async def _readiness_handler(self, request: Request) -> Response:
@@ -104,34 +114,29 @@ class PrometheusExporter:
             checks = {
                 "database": self._check_database_readiness(),
                 "config_paths": self._check_config_readiness(),
-                "email_config": self._check_email_readiness()
+                "email_config": self._check_email_readiness(),
             }
-            
+
             all_ready = all(checks.values())
             status_code = 200 if all_ready else 503
-            
-            return web.json_response({
-                "ready": all_ready,
-                "checks": checks
-            }, status=status_code)
+
+            return web.json_response(
+                {"ready": all_ready, "checks": checks}, status=status_code
+            )
         except Exception as e:
             logger.error(f"Error checking readiness: {e}")
-            return web.json_response(
-                {"ready": False, "error": str(e)},
-                status=500
-            )
+            return web.json_response({"ready": False, "error": str(e)}, status=500)
 
     async def _liveness_handler(self, request: Request) -> Response:
         """Handle /health/live endpoint for Kubernetes liveness probe."""
         try:
             # Simple liveness check - just verify the application is responding
-            return web.json_response({"alive": True, "timestamp": asyncio.get_event_loop().time()})
+            return web.json_response(
+                {"alive": True, "timestamp": asyncio.get_event_loop().time()}
+            )
         except Exception as e:
             logger.error(f"Error in liveness check: {e}")
-            return web.json_response(
-                {"alive": False, "error": str(e)},
-                status=500
-            )
+            return web.json_response({"alive": False, "error": str(e)}, status=500)
 
     async def _status_handler(self, request: Request) -> Response:
         """Handle /status endpoint for detailed application status."""
@@ -143,15 +148,14 @@ class PrometheusExporter:
                 "uptime": asyncio.get_event_loop().time(),  # Simplified uptime
                 "health": self.health_checker.run_all_checks(),
                 "database_stats": await self._get_database_stats(),
-                "config_summary": self._get_config_summary()
+                "config_summary": self._get_config_summary(),
             }
-            
+
             return web.json_response(status_info)
         except Exception as e:
             logger.error(f"Error generating status: {e}")
             return web.json_response(
-                {"error": "Failed to generate status", "message": str(e)},
-                status=500
+                {"error": "Failed to generate status", "message": str(e)}, status=500
             )
 
     def _update_dynamic_metrics(self):
@@ -191,12 +195,14 @@ class PrometheusExporter:
         try:
             smtp_config = self.config.get_smtp_config()
             kindle_email = self.config.get_kindle_email()
-            return all([
-                smtp_config.get("server"),
-                smtp_config.get("username"),
-                smtp_config.get("password"),
-                kindle_email
-            ])
+            return all(
+                [
+                    smtp_config.get("server"),
+                    smtp_config.get("username"),
+                    smtp_config.get("password"),
+                    kindle_email,
+                ]
+            )
         except Exception as e:
             logger.warning(f"Email readiness check failed: {e}")
             return False
@@ -207,14 +213,24 @@ class PrometheusExporter:
             with self.db_manager.get_session() as session:
                 # Get counts of processed files by status
                 total_files = session.query(self.db_manager.ProcessedFile).count()
-                successful_files = session.query(self.db_manager.ProcessedFile).filter_by(status="success").count()
-                failed_files = session.query(self.db_manager.ProcessedFile).filter_by(status="failed").count()
-                
+                successful_files = (
+                    session.query(self.db_manager.ProcessedFile)
+                    .filter_by(status="success")
+                    .count()
+                )
+                failed_files = (
+                    session.query(self.db_manager.ProcessedFile)
+                    .filter_by(status="failed")
+                    .count()
+                )
+
                 return {
                     "total_files": total_files,
                     "successful_files": successful_files,
                     "failed_files": failed_files,
-                    "success_rate": (successful_files / total_files * 100) if total_files > 0 else 0
+                    "success_rate": (successful_files / total_files * 100)
+                    if total_files > 0
+                    else 0,
                 }
         except Exception as e:
             logger.warning(f"Failed to get database stats: {e}")
@@ -231,7 +247,7 @@ class PrometheusExporter:
                 "smtp_server": self.config.get_smtp_config().get("server"),
                 "async_workers": self.config.get("advanced.async_workers", 3),
                 "max_file_size_mb": self.config.get("advanced.max_file_size_mb", 50),
-                "retry_attempts": self.config.get("advanced.retry_attempts", 3)
+                "retry_attempts": self.config.get("advanced.retry_attempts", 3),
             }
         except Exception as e:
             logger.warning(f"Failed to get config summary: {e}")
@@ -253,7 +269,10 @@ class PrometheusExporter:
             logger.info("  GET /status - Detailed application status")
             return runner
         except Exception as e:
-            raise MonitoringError(f"Failed to start Prometheus exporter: {e}", severity=ErrorSeverity.CRITICAL)
+            raise MonitoringError(
+                f"Failed to start Prometheus exporter: {e}",
+                severity=ErrorSeverity.CRITICAL,
+            )
 
     async def stop_server(self, runner: web.AppRunner):
         """Stop the Prometheus exporter web server."""
@@ -271,13 +290,19 @@ class MetricsUpdater:
         self.metrics_collector = metrics_collector
         logger.info("MetricsUpdater initialized.")
 
-    def on_file_processed(self, file_path: Path, success: bool, file_type: str, processing_time_ms: int):
+    def on_file_processed(
+        self, file_path: Path, success: bool, file_type: str, processing_time_ms: int
+    ):
         """Update metrics when a file is processed."""
         try:
             status = "success" if success else "failed"
             self.metrics_collector.increment_files_processed(status, file_type)
-            self.metrics_collector.observe_file_processing_duration(processing_time_ms / 1000.0, file_type)
-            logger.debug(f"Updated metrics for processed file: {file_path.name} ({status})")
+            self.metrics_collector.observe_file_processing_duration(
+                processing_time_ms / 1000.0, file_type
+            )
+            logger.debug(
+                f"Updated metrics for processed file: {file_path.name} ({status})"
+            )
         except Exception as e:
             logger.warning(f"Failed to update file processing metrics: {e}")
 
@@ -319,6 +344,8 @@ class MetricsUpdater:
         try:
             self.metrics_collector.set_queue_size(queue_size)
             self.metrics_collector.set_active_tasks(active_tasks)
-            logger.debug(f"Updated queue metrics: size={queue_size}, active_tasks={active_tasks}")
+            logger.debug(
+                f"Updated queue metrics: size={queue_size}, active_tasks={active_tasks}"
+            )
         except Exception as e:
             logger.warning(f"Failed to update queue metrics: {e}")
