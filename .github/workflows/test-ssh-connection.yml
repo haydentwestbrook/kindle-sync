@@ -35,12 +35,15 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.PI_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
+          echo "Adding host key to known_hosts..."
           ssh-keyscan -H -p ${{ env.PI_PORT }} ${{ env.PI_IP }} >> ~/.ssh/known_hosts
+          echo "Verifying host key..."
+          ssh-keyscan -H -p ${{ env.PI_PORT }} ${{ env.PI_IP }}
 
       - name: Test SSH connection
         run: |
           echo "Testing SSH connection to ${{ env.PI_USER }}@${{ env.PI_IP }}:${{ env.PI_PORT }}"
-          ssh -i ~/.ssh/id_rsa -p ${{ env.PI_PORT }} -o ConnectTimeout=10 ${{ env.PI_USER }}@${{ env.PI_IP }} "echo 'SSH connection successful!'"
+          ssh -i ~/.ssh/id_rsa -p ${{ env.PI_PORT }} -o ConnectTimeout=10 -o StrictHostKeyChecking=no -o UserKnownHostsFile=~/.ssh/known_hosts ${{ env.PI_USER }}@${{ env.PI_IP }} "echo 'SSH connection successful!'"
 
       - name: Get system info
         run: |

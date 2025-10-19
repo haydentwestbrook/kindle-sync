@@ -1,0 +1,68 @@
+name: Debug SSH Connection
+
+on:
+  workflow_dispatch:
+    inputs:
+      pi_ip:
+        description: 'Raspberry Pi IP Address'
+        required: true
+        default: '73.11.87.47'
+      pi_port:
+        description: 'SSH Port'
+        required: true
+        default: '2222'
+      pi_user:
+        description: 'SSH Username'
+        required: true
+        default: 'hayden'
+
+env:
+  PI_IP: ${{ github.event.inputs.pi_ip }}
+  PI_PORT: ${{ github.event.inputs.pi_port }}
+  PI_USER: ${{ github.event.inputs.pi_user }}
+
+jobs:
+  debug-ssh:
+    runs-on: ubuntu-latest
+    name: Debug SSH Connection
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Debug SSH setup
+        run: |
+          echo "=== Debugging SSH Setup ==="
+          mkdir -p ~/.ssh
+          echo "Creating SSH key file..."
+          echo "${{ secrets.PI_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          echo "Setting permissions..."
+          chmod 600 ~/.ssh/id_rsa
+          echo "Checking key file..."
+          ls -la ~/.ssh/id_rsa
+          echo "Checking key format..."
+          file ~/.ssh/id_rsa
+          echo "First few lines of key:"
+          head -3 ~/.ssh/id_rsa
+          echo "Last few lines of key:"
+          tail -3 ~/.ssh/id_rsa
+          echo "Key file size:"
+          wc -c ~/.ssh/id_rsa
+          echo "Adding host to known_hosts..."
+          ssh-keyscan -H -p ${{ env.PI_PORT }} ${{ env.PI_IP }} >> ~/.ssh/known_hosts
+          echo "Known hosts content:"
+          cat ~/.ssh/known_hosts
+          echo "Testing host key verification..."
+          ssh-keyscan -H -p ${{ env.PI_PORT }} ${{ env.PI_IP }}
+
+      - name: Test SSH connection with verbose output
+        run: |
+          echo "=== Testing SSH Connection ==="
+          echo "Attempting SSH connection with verbose output..."
+          ssh -vvv -i ~/.ssh/id_rsa -p ${{ env.PI_PORT }} -o ConnectTimeout=10 -o StrictHostKeyChecking=no ${{ env.PI_USER }}@${{ env.PI_IP }} "echo 'SSH connection successful!'" || echo "SSH connection failed"
+
+      - name: Alternative SSH test
+        run: |
+          echo "=== Alternative SSH Test ==="
+          echo "Testing with different SSH options..."
+          ssh -i ~/.ssh/id_rsa -p ${{ env.PI_PORT }} -o ConnectTimeout=10 -o PasswordAuthentication=no -o PubkeyAuthentication=yes -o PreferredAuthentications=publickey ${{ env.PI_USER }}@${{ env.PI_IP }} "echo 'Alternative SSH test successful!'" || echo "Alternative SSH test failed"
