@@ -6,7 +6,11 @@ on:
       pi_ip:
         description: 'Raspberry Pi IP Address'
         required: true
-        default: '192.168.0.12'
+        default: '73.11.87.47'
+      pi_port:
+        description: 'SSH Port'
+        required: true
+        default: '2222'
       pi_user:
         description: 'SSH Username'
         required: true
@@ -35,7 +39,8 @@ on:
       - '.github/workflows/deploy-to-pi.yml'
 
 env:
-  PI_IP: ${{ github.event.inputs.pi_ip || '192.168.0.12' }}
+  PI_IP: ${{ github.event.inputs.pi_ip || '73.11.87.47' }}
+  PI_PORT: ${{ github.event.inputs.pi_port || '2222' }}
   PI_USER: ${{ github.event.inputs.pi_user || 'hayden' }}
   PI_DIR: '/home/hayden/kindle-sync'
   DEPLOYMENT_ENV: ${{ github.event.inputs.environment || 'production' }}
@@ -105,16 +110,16 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.PI_SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ env.PI_IP }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H -p ${{ env.PI_PORT }} ${{ env.PI_IP }} >> ~/.ssh/known_hosts
 
       - name: Test SSH connection
         run: |
-          ssh -i ~/.ssh/id_rsa -o ConnectTimeout=10 ${{ env.PI_USER }}@${{ env.PI_IP }} "echo 'SSH connection successful'"
+          ssh -i ~/.ssh/id_rsa -p ${{ env.PI_PORT }} -o ConnectTimeout=10 ${{ env.PI_USER }}@${{ env.PI_IP }} "echo 'SSH connection successful'"
 
       - name: Get system information
         run: |
           echo "=== System Information ==="
-          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+          ssh -i ~/.ssh/id_rsa -p ${{ env.PI_PORT }} ${{ env.PI_USER }}@${{ env.PI_IP }} "
             echo 'OS:' && cat /etc/os-release | grep PRETTY_NAME
             echo 'Python:' && python3 --version
             echo 'Memory:' && free -h
@@ -125,7 +130,7 @@ jobs:
       - name: Update system packages
         run: |
           echo "🔄 Updating system packages..."
-          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+          ssh -i ~/.ssh/id_rsa -p ${{ env.PI_PORT }} ${{ env.PI_USER }}@${{ env.PI_IP }} "
             sudo apt update &&
             sudo apt upgrade -y
           "
@@ -133,14 +138,14 @@ jobs:
       - name: Install system dependencies
         run: |
           echo "📦 Installing system dependencies..."
-          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+          ssh -i ~/.ssh/id_rsa -p ${{ env.PI_PORT }} ${{ env.PI_USER }}@${{ env.PI_IP }} "
             sudo apt install -y git tesseract-ocr tesseract-ocr-eng poppler-utils
           "
 
       - name: Clone or update repository
         run: |
           echo "📁 Setting up repository..."
-          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+          ssh -i ~/.ssh/id_rsa -p ${{ env.PI_PORT }} ${{ env.PI_USER }}@${{ env.PI_IP }} "
             if [ -d '${{ env.PI_DIR }}' ]; then
               echo 'Repository exists, updating...'
               cd ${{ env.PI_DIR }} && git pull
@@ -153,7 +158,7 @@ jobs:
       - name: Setup Python environment
         run: |
           echo "🐍 Setting up Python environment..."
-          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+          ssh -i ~/.ssh/id_rsa -p ${{ env.PI_PORT }} ${{ env.PI_USER }}@${{ env.PI_IP }} "
             cd ${{ env.PI_DIR }} &&
             python3 -m venv venv &&
             source venv/bin/activate &&
@@ -164,7 +169,7 @@ jobs:
       - name: Create directory structure
         run: |
           echo "📂 Creating directory structure..."
-          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+          ssh -i ~/.ssh/id_rsa -p ${{ env.PI_PORT }} ${{ env.PI_USER }}@${{ env.PI_IP }} "
             mkdir -p ${{ env.PI_DIR }}/logs ${{ env.PI_DIR }}/backups ${{ env.PI_DIR }}/temp &&
             mkdir -p /home/${{ env.PI_USER }}/obsidian-vault/'Kindle Sync' &&
             mkdir -p /home/${{ env.PI_USER }}/obsidian-vault/Templates &&
@@ -174,7 +179,7 @@ jobs:
       - name: Setup configuration
         run: |
           echo "⚙️ Setting up configuration..."
-          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+          ssh -i ~/.ssh/id_rsa -p ${{ env.PI_PORT }} ${{ env.PI_USER }}@${{ env.PI_IP }} "
             cd ${{ env.PI_DIR }} &&
             if [ ! -f 'config.yaml' ]; then
               cp config.yaml.example config.yaml
@@ -187,7 +192,7 @@ jobs:
       - name: Set permissions
         run: |
           echo "🔐 Setting permissions..."
-          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+          ssh -i ~/.ssh/id_rsa -p ${{ env.PI_PORT }} ${{ env.PI_USER }}@${{ env.PI_IP }} "
             sudo chown -R ${{ env.PI_USER }}:${{ env.PI_USER }} ${{ env.PI_DIR }} &&
             sudo chown -R ${{ env.PI_USER }}:${{ env.PI_USER }} /home/${{ env.PI_USER }}/obsidian-vault &&
             chmod +x ${{ env.PI_DIR }}/scripts/*.sh &&
@@ -197,7 +202,7 @@ jobs:
       - name: Test deployment
         run: |
           echo "🧪 Testing deployment..."
-          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+          ssh -i ~/.ssh/id_rsa -p ${{ env.PI_PORT }} ${{ env.PI_USER }}@${{ env.PI_IP }} "
             cd ${{ env.PI_DIR }} &&
             source venv/bin/activate &&
             python -c 'import pytesseract; print(\"✓ Tesseract available\")' &&
@@ -209,7 +214,7 @@ jobs:
       - name: Create systemd service
         run: |
           echo "🔧 Creating systemd service..."
-          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+          ssh -i ~/.ssh/id_rsa -p ${{ env.PI_PORT }} ${{ env.PI_USER }}@${{ env.PI_IP }} "
             sudo tee /etc/systemd/system/kindle-sync.service > /dev/null << 'EOF'
           [Unit]
           Description=Kindle Scribe Sync System
@@ -232,7 +237,7 @@ jobs:
       - name: Enable and start service
         run: |
           echo "🚀 Enabling and starting service..."
-          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+          ssh -i ~/.ssh/id_rsa -p ${{ env.PI_PORT }} ${{ env.PI_USER }}@${{ env.PI_IP }} "
             sudo systemctl daemon-reload &&
             sudo systemctl enable kindle-sync.service &&
             sudo systemctl start kindle-sync.service
@@ -241,7 +246,7 @@ jobs:
       - name: Check service status
         run: |
           echo "📊 Checking service status..."
-          ssh -i ~/.ssh/id_rsa ${{ env.PI_USER }}@${{ env.PI_IP }} "
+          ssh -i ~/.ssh/id_rsa -p ${{ env.PI_PORT }} ${{ env.PI_USER }}@${{ env.PI_IP }} "
             sudo systemctl status kindle-sync.service --no-pager &&
             echo 'Service logs (last 10 lines):' &&
             sudo journalctl -u kindle-sync.service --no-pager -n 10
